@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态梦幻版欢迎页面 - StillPage</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap');
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .welcome-screen {
+            width: 375px;
+            height: 812px;
+            background-color: #ffffff;
+            border-radius: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .content-wrapper {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .brand-name { 
+            font-family: 'Noto Serif SC', serif; 
+            font-size: 48px; 
+            font-weight: 700; 
+            color: #1a1a1a; 
+            letter-spacing: 5px; 
+        }
+        
+        .english-name { 
+            font-size: 22px; 
+            color: #4d4d4d; 
+            letter-spacing: 1px; 
+            margin-top: 15px; 
+            margin-left: -42px; 
+            padding-left: 95px; 
+        }
+        
+        .subtitle { 
+            font-family: 'KaiTi', 'STKaiti', '中华楷体', serif; 
+            font-size: 18px; 
+            color: #666666; 
+            margin-top: 35px; 
+            line-height: 1.7; 
+            font-weight: normal; 
+        }
+        
+        .floating-bubbles-container { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 1; 
+        }
+        
+        .bubble { 
+            position: absolute; 
+            border-radius: 50%; 
+            opacity: 0; 
+            animation: float-around 25s infinite ease-in-out; 
+        }
+        
+        @keyframes float-around {
+            0% { transform: translate(0, 0); opacity: 0.7; }
+            25% { transform: translate(var(--x1, 30px), var(--y1, -80px)); }
+            50% { transform: translate(var(--x2, -40px), var(--y2, -150px)); opacity: 0.6; }
+            75% { transform: translate(var(--x3, 20px), var(--y3, -250px)); }
+            100% { transform: translate(var(--x4, 0px), var(--y4, -400px)); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-screen">
+        <div class="floating-bubbles-container" id="bubble-container"></div>
+        <div class="content-wrapper">
+            <div class="brand-name">一页书</div>
+            <div class="english-name">Stillpage</div>
+            <div class="subtitle">我的世界，只有这一页书</div>
+        </div>
+    </div>
+
+    <script>
+        // 生成动态气泡
+        const container = document.getElementById('bubble-container');
+        if (container) {
+            const colors = [ 
+                'rgba(135, 206, 235, 0.6)', 
+                'rgba(255, 215, 0, 0.5)', 
+                'rgba(255, 182, 193, 0.6)', 
+                'rgba(144, 238, 144, 0.5)', 
+                'rgba(221, 160, 221, 0.6)', 
+                'rgba(255, 160, 122, 0.5)' 
+            ];
+            
+            for (let i = 0; i < 15; i++) {
+                const bubble = document.createElement('div');
+                bubble.classList.add('bubble');
+                const size = Math.random() * 50 + 10;
+                const startX = Math.random() * 100;
+                const startY = Math.random() * 100;
+                const duration = Math.random() * 20 + 20;
+                const delay = Math.random() * 20;
+                
+                bubble.style.cssText = `
+                    width:${size}px; 
+                    height:${size}px; 
+                    left:${startX}%; 
+                    top:${startY}%; 
+                    animation-duration:${duration}s; 
+                    animation-delay:${delay}s; 
+                    background-color:${colors[Math.floor(Math.random() * colors.length)]}; 
+                    --x1:${Math.random()*100-50}px; 
+                    --y1:${Math.random()*100-100}px; 
+                    --x2:${Math.random()*100-50}px; 
+                    --y2:${Math.random()*100-150}px; 
+                    --x3:${Math.random()*100-50}px; 
+                    --y3:${Math.random()*100-250}px; 
+                    --x4:${Math.random()*100-50}px; 
+                    --y4:${Math.random()*100-400}px;
+                `;
+                container.appendChild(bubble);
+            }
+        }
+    </script>
+</body>
+</html>

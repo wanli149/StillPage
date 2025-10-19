@@ -1,0 +1,21 @@
+{
+  "bookSourceName": "短剧书源示例",
+  "bookSourceUrl": "https://example.com/api",
+  "bookSourceType": 0,
+  "ruleContent": {
+    "content": "$.httpurl_preview",
+    "title": "$.title",
+    "nextContentUrl": "",
+    "webJs": "",
+    "sourceRegex": "",
+    "replaceRegex": "",
+    "imageStyle": "",
+    "imageDecode": "",
+    "payAction": ""
+  },
+  "ruleToc": {
+    "chapterList": "$.data.episodes",
+    "chapterName": "$.episode_title",
+    "chapterUrl": "$.episode_id@js:java.put('episodeId', result);''"
+  }
+}

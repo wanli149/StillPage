@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图标转换工具 - StillPage</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 2.5em;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .tool-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .tool-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.1);
+        }
+
+        .tool-title {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .tool-icon {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+            background: #667eea;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .tool-description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .tool-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+
+        .tool-features li {
+            padding: 5px 0;
+            color: #555;
+        }
+
+        .tool-features li:before {
+            content: "✓";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .tool-link {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+
+        .tool-link:hover {
+            background: #5a6fd8;
+        }
+
+        .steps-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+
+        .steps-title {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .step {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .step-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .step-description {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 图标转换工具集合</h1>
+        
+        <div class="tools-grid">
+            <!-- HTML/CSS to Image -->
+            <div class="tool-card">
+                <div class="tool-title">
+                    <div class="tool-icon">H</div>
+                    HTML/CSS to Image
+                </div>
+                <div class="tool-description">
+                    专门将HTML/CSS代码转换为高质量图片的在线工具，支持多种格式输出。
+                </div>
+                <ul class="tool-features">
+                    <li>支持完整的HTML/CSS</li>
+                    <li>高质量PNG/JPG输出</li>
+                    <li>自定义尺寸</li>
+                    <li>API支持</li>
+                </ul>
+                <a href="https://htmlcsstoimage.com/" class="tool-link" target="_blank">访问工具</a>
+            </div>
+
+            <!-- Android Asset Studio -->
+            <div class="tool-card">
+                <div class="tool-title">
+                    <div class="tool-icon">A</div>
+                    Android Asset Studio
+                </div>
+                <div class="tool-description">
+                    Google官方推荐的Android图标生成工具，专为Android应用设计。
+                </div>
+                <ul class="tool-features">
+                    <li>生成所有密度的图标</li>
+                    <li>Adaptive Icon支持</li>
+                    <li>Material Design规范</li>
+                    <li>批量导出</li>
+                </ul>
+                <a href="https://romannurik.github.io/AndroidAssetStudio/" class="tool-link" target="_blank">访问工具</a>
+            </div>
+
+            <!-- Figma -->
+            <div class="tool-card">
+                <div class="tool-title">
+                    <div class="tool-icon">F</div>
+                    Figma
+                </div>
+                <div class="tool-description">
+                    专业的设计工具，可以直接从HTML设计创建图标并导出多种格式。
+                </div>
+                <ul class="tool-features">
+                    <li>专业设计工具</li>
+                    <li>多格式导出</li>
+                    <li>团队协作</li>
+                    <li>插件生态</li>
+                </ul>
+                <a href="https://www.figma.com/" class="tool-link" target="_blank">访问工具</a>
+            </div>
+
+            <!-- CodePen -->
+            <div class="tool-card">
+                <div class="tool-title">
+                    <div class="tool-icon">C</div>
+                    CodePen
+                </div>
+                <div class="tool-description">
+                    在线代码编辑器，可以直接运行HTML/CSS代码并截图保存。
+                </div>
+                <ul class="tool-features">
+                    <li>实时预览</li>
+                    <li>截图功能</li>
+                    <li>代码分享</li>
+                    <li>社区资源</li>
+                </ul>
+                <a href="https://codepen.io/" class="tool-link" target="_blank">访问工具</a>
+            </div>
+
+            <!-- SVG to PNG -->
+            <div class="tool-card">
+                <div class="tool-title">
+                    <div class="tool-icon">S</div>
+                    SVG to PNG
+                </div>
+                <div class="tool-description">
+                    将SVG矢量图转换为PNG位图的专业工具，支持批量转换。
+                </div>
+                <ul class="tool-features">
+                    <li>高质量转换</li>
+                    <li>自定义尺寸</li>
+                    <li>批量处理</li>
+                    <li>透明背景支持</li>
+                </ul>
+                <a href="https://svgtopng.com/" class="tool-link" target="_blank">访问工具</a>
+            </div>
+
+            <!-- Canva -->
+            <div class="tool-card">
+                <div class="tool-title">
+                    <div class="tool-icon">🎨</div>
+                    Canva
+                </div>
+                <div class="tool-description">
+                    简单易用的在线设计工具，有专门的APP图标模板。
+                </div>
+                <ul class="tool-features">
+                    <li>APP图标模板</li>
+                    <li>拖拽式设计</li>
+                    <li>多尺寸导出</li>
+                    <li>丰富素材库</li>
+                </ul>
+                <a href="https://www.canva.com/" class="tool-link" target="_blank">访问工具</a>
+            </div>
+        </div>
+
+        <div class="steps-section">
+            <div class="steps-title">📋 推荐转换流程</div>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-title">准备HTML代码</div>
+                    <div class="step-description">
+                        将你的APP图标.html文件中的图标部分代码复制出来，确保包含完整的CSS样式。
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-title">选择转换工具</div>
+                    <div class="step-description">
+                        推荐使用HTML/CSS to Image或Android Asset Studio，前者适合HTML转换，后者专为Android设计。
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-title">设置输出参数</div>
+                    <div class="step-description">
+                        设置图标尺寸为512x512px（最大尺寸），确保高质量输出，选择PNG格式保持透明背景。
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-title">生成多尺寸</div>
+                    <div class="step-description">
+                        使用Android Asset Studio生成所有密度的图标文件，或手动调整为不同尺寸：48px, 72px, 96px, 144px, 192px。
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <div class="step-title">替换项目文件</div>
+                    <div class="step-description">
+                        将生成的PNG文件替换到Android项目的对应mipmap文件夹中，保持文件名一致。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 按下状态：略微加深背景并保持圆角与描边 -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/btn_bg_press" />
+            <corners android:radius="6dp" />
+            <stroke android:width="1dp" android:color="@color/accent" />
+        </shape>
+    </item>
+    <!-- 选中状态：与按下同样效果，提升反馈一致性 -->
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/btn_bg_press" />
+            <corners android:radius="6dp" />
+            <stroke android:width="1dp" android:color="@color/accent" />
+        </shape>
+    </item>
+    <!-- 默认状态：透明背景 + 强调色描边，圆角样式 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <corners android:radius="6dp" />
+            <stroke android:width="1dp" android:color="@color/accent" />
+        </shape>
+    </item>
+</selector>

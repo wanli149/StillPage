@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    
+    <!-- 精确的"壹"字前景 - 透明背景 -->
+    <group android:translateX="100" android:translateY="100">
+        
+        <!-- 阴影效果 - 右下偏移 -->
+        <group android:translateX="3" android:translateY="3">
+            <!-- 上横 -->
+            <path android:fillColor="#000000" android:fillAlpha="0.2"
+                android:pathData="M-50,-50 L50,-50 L50,-40 L-50,-40 Z" />
+            <!-- 中间"士"字部分 -->
+            <!-- 上横 -->
+            <path android:fillColor="#000000" android:fillAlpha="0.2"
+                android:pathData="M-35,-25 L35,-25 L35,-15 L-35,-15 Z" />
+            <!-- 竖 -->
+            <path android:fillColor="#000000" android:fillAlpha="0.2"
+                android:pathData="M-5,-15 L5,-15 L5,15 L-5,15 Z" />
+            <!-- 下横 -->
+            <path android:fillColor="#000000" android:fillAlpha="0.2"
+                android:pathData="M-35,5 L35,5 L35,15 L-35,15 Z" />
+            <!-- 底横 -->
+            <path android:fillColor="#000000" android:fillAlpha="0.2"
+                android:pathData="M-50,40 L50,40 L50,50 L-50,50 Z" />
+        </group>
+        
+        <!-- 主体"壹"字 -->
+        <!-- 上横 -->
+        <path android:fillColor="#333333"
+            android:pathData="M-50,-50 L50,-50 L50,-40 L-50,-40 Z" />
+        <!-- 中间"士"字部分 -->
+        <!-- 上横 -->
+        <path android:fillColor="#333333"
+            android:pathData="M-35,-25 L35,-25 L35,-15 L-35,-15 Z" />
+        <!-- 竖 -->
+        <path android:fillColor="#333333"
+            android:pathData="M-5,-15 L5,-15 L5,15 L-5,15 Z" />
+        <!-- 下横 -->
+        <path android:fillColor="#333333"
+            android:pathData="M-35,5 L35,5 L35,15 L-35,15 Z" />
+        <!-- 底横 -->
+        <path android:fillColor="#333333"
+            android:pathData="M-50,40 L50,40 L50,50 L-50,50 Z" />
+        
+    </group>
+</vector>

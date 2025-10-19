@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_seek_back"
+        android:title="快退10秒"
+        android:icon="@drawable/ic_fast_rewind"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_seek_forward"
+        android:title="快进10秒"
+        android:icon="@drawable/ic_fast_forward"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_toggle_fullscreen"
+        android:title="切换全屏"
+        android:icon="@drawable/ic_screen"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_speed_075"
+        android:title="倍速 0.75x"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_speed_10"
+        android:title="倍速 1.0x"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_speed_125"
+        android:title="倍速 1.25x"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_speed_150"
+        android:title="倍速 1.5x"
+        app:showAsAction="never" />
+
+    <!-- 画中画入口（溢出菜单） -->
+    <item
+        android:id="@+id/action_pip"
+        android:title="画中画"
+        app:showAsAction="never" />
+
+    <!-- 字幕开关 -->
+    <item
+        android:id="@+id/action_subtitle_on"
+        android:title="字幕开"
+        android:checkable="true"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_subtitle_off"
+        android:title="字幕关"
+        android:checkable="true"
+        app:showAsAction="never" />
+
+    <!-- 动态字幕语言选择 -->
+    <item
+        android:id="@+id/action_subtitle_lang_select"
+        android:title="选择字幕语言…"
+        app:showAsAction="never" />
+
+    <!-- 统一字幕入口：动态语言选择（移除静态中/英项） -->
+
+    <!-- 动态音轨语言选择 -->
+    <item
+        android:id="@+id/action_audio_track_select"
+        android:title="选择音轨…"
+        app:showAsAction="never" />
+
+</menu>

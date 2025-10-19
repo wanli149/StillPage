@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线图标生成器 - StillPage</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Noto+Sans+SC:wght@400;700&family=Ma+Shan+Zheng&family=Zhi+Mang+Xing&family=Liu+Jian+Mao+Cao&display=swap');
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            grid-column: 1 / -1;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .preview-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .icon-preview {
+            width: 200px;
+            height: 200px;
+            border-radius: 22.5%;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #FCFCFC;
+            border: 1px solid #F0F0F0;
+        }
+
+        .controls {
+            display: grid;
+            gap: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, select, button {
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #5a6fd8;
+        }
+
+        .download-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .size-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .size-button {
+            padding: 10px 8px;
+            font-size: 11px;
+            background: #28a745;
+            white-space: nowrap;
+        }
+
+        .size-button:hover {
+            background: #218838;
+        }
+
+        /* 动态调整图标预览容器 */
+        .icon-preview {
+            min-width: 48px;
+            min-height: 48px;
+            max-width: 400px;
+            max-height: 400px;
+            transition: all 0.3s ease;
+        }
+
+        /* 小尺寸时调整字体和气泡 */
+        .icon-preview.small .symbol {
+            font-size: calc(120px * var(--scale-factor, 1));
+        }
+
+        .icon-preview.small .bubble-1 {
+            width: calc(105px * var(--scale-factor, 1));
+            height: calc(105px * var(--scale-factor, 1));
+        }
+
+        .icon-preview.small .bubble-2 {
+            width: calc(80px * var(--scale-factor, 1));
+            height: calc(80px * var(--scale-factor, 1));
+        }
+
+        .icon-preview.small .bubble-3 {
+            width: calc(65px * var(--scale-factor, 1));
+            height: calc(65px * var(--scale-factor, 1));
+        }
+
+        /* 图标样式 */
+        .icon-pure .symbol {
+            font-size: 120px;
+            font-family: 'Noto Serif SC', serif;
+            font-weight: 700;
+            color: #333;
+            text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .icon-dream .bubble {
+            position: absolute;
+            border-radius: 50%;
+            box-shadow: 4px 4px 15px rgba(0, 0, 0, 0.12);
+        }
+
+        .icon-dream .bubble-1 {
+            width: 105px;
+            height: 105px;
+            background-color: rgba(173, 216, 230, 0.45);
+            top: 15%;
+            left: 8%;
+        }
+
+        .icon-dream .bubble-2 {
+            width: 80px;
+            height: 80px;
+            background-color: rgba(255, 228, 181, 0.55);
+            top: 30%;
+            left: 50%;
+        }
+
+        .icon-dream .bubble-3 {
+            width: 65px;
+            height: 65px;
+            background-color: rgba(255, 182, 193, 0.45);
+            top: 55%;
+            left: 18%;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 在线图标生成器</h1>
+        
+        <div class="panel controls">
+            <h2>图标设置</h2>
+            
+            <div class="control-group">
+                <label for="iconType">图标类型</label>
+                <select id="iconType" onchange="updateIcon()">
+                    <option value="pure">纯粹版 - 浮雕的"壹"</option>
+                    <option value="dream">梦幻版 - 立体的气泡</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="iconSize">预览尺寸</label>
+                <select id="iconSize" onchange="updateSize()">
+                    <option value="48">48px (mdpi)</option>
+                    <option value="72">72px (hdpi)</option>
+                    <option value="96">96px (xhdpi)</option>
+                    <option value="144">144px (xxhdpi)</option>
+                    <option value="192">192px (xxxhdpi)</option>
+                    <option value="200" selected>200px (预览)</option>
+                    <option value="512">512px (高清)</option>
+                    <option value="1024">1024px (超高清)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="bgColor">背景颜色</label>
+                <input type="color" id="bgColor" value="#FCFCFC" onchange="updateBackground()">
+            </div>
+
+            <div class="control-group">
+                <label for="fontFamily">字体选择（仅纯粹版）</label>
+                <select id="fontFamily" onchange="updateFont()">
+                    <option value="Noto Serif SC">思源宋体 (默认)</option>
+                    <option value="Noto Sans SC">思源黑体</option>
+                    <option value="Ma Shan Zheng">马善政楷体</option>
+                    <option value="Zhi Mang Xing">志忙星行书</option>
+                    <option value="Liu Jian Mao Cao">刘建毛草</option>
+                    <option value="SimSun, serif">宋体</option>
+                    <option value="SimHei, sans-serif">黑体</option>
+                    <option value="KaiTi, serif">楷体</option>
+                    <option value="FangSong, serif">仿宋</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="textColor">文字/图标颜色</label>
+                <input type="color" id="textColor" value="#333333" onchange="updateTextColor()">
+            </div>
+
+            <div class="control-group">
+                <label for="shadowOpacity">阴影透明度</label>
+                <input type="range" id="shadowOpacity" min="0" max="1" step="0.1" value="0.15" onchange="updateShadow()">
+            </div>
+
+            <button onclick="downloadIconSet()" style="background: #ff6b35; font-size: 16px; padding: 15px;">下载完整图标套装</button>
+
+            <button onclick="testDownload()" style="background: #28a745; font-size: 14px; padding: 10px; margin-top: 10px;">🧪 测试下载功能</button>
+
+            <button onclick="simpleDownload()" style="background: #6c757d; font-size: 14px; padding: 10px; margin-top: 5px;">📥 简单下载 (备用)</button>
+
+            <div class="download-section">
+                <h3>📱 Android图标尺寸</h3>
+                <div class="size-grid">
+                    <button class="size-button" onclick="downloadSize(48)" title="mipmap-mdpi">48px (mdpi)</button>
+                    <button class="size-button" onclick="downloadSize(72)" title="mipmap-hdpi">72px (hdpi)</button>
+                    <button class="size-button" onclick="downloadSize(96)" title="mipmap-xhdpi">96px (xhdpi)</button>
+                    <button class="size-button" onclick="downloadSize(144)" title="mipmap-xxhdpi">144px (xxhdpi)</button>
+                    <button class="size-button" onclick="downloadSize(192)" title="mipmap-xxxhdpi">192px (xxxhdpi)</button>
+                    <button class="size-button" onclick="downloadSize(512)" title="高清版本">512px (高清)</button>
+                </div>
+
+                <div style="margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 8px; font-size: 14px; color: #1976d2;">
+                    💡 <strong>使用提示：</strong>点击尺寸按钮会自动调整预览大小，然后右键保存图片即可
+                </div>
+            </div>
+        </div>
+
+        <div class="panel preview-panel">
+            <h2>图标预览</h2>
+            <div id="iconPreview" class="icon-preview icon-pure">
+                <div class="symbol">壹</div>
+            </div>
+            
+            <div style="text-align: center; color: #666; margin-top: 20px;">
+                <p>📦 <strong>一键下载完整套装</strong>：包含所有Android尺寸</p>
+                <p>🖱️ <strong>单个保存</strong>：右键点击图标"图片另存为"</p>
+                <p>📱 <strong>尺寸按钮</strong>：快速切换到指定尺寸</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加html2canvas库 -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <!-- 添加JSZip库用于打包 -->
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <!-- 添加FileSaver库用于下载 -->
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+    <script>
+        function updateIcon() {
+            const iconType = document.getElementById('iconType').value;
+            const preview = document.getElementById('iconPreview');
+
+            if (iconType === 'pure') {
+                preview.className = 'icon-preview icon-pure';
+                preview.innerHTML = '<div class="symbol">壹</div>';
+            } else {
+                preview.className = 'icon-preview icon-dream';
+                preview.innerHTML = `
+                    <div class="bubble bubble-1"></div>
+                    <div class="bubble bubble-2"></div>
+                    <div class="bubble bubble-3"></div>
+                `;
+            }
+
+            // 重新应用当前尺寸设置
+            updateSize();
+        }
+
+        function updateSize() {
+            const size = parseInt(document.getElementById('iconSize').value);
+            const preview = document.getElementById('iconPreview');
+
+            preview.style.width = size + 'px';
+            preview.style.height = size + 'px';
+
+            // 计算缩放因子
+            const scaleFactor = size / 200;
+            preview.style.setProperty('--scale-factor', scaleFactor);
+
+            // 为小尺寸添加特殊类
+            if (size < 100) {
+                preview.classList.add('small');
+            } else {
+                preview.classList.remove('small');
+            }
+
+            // 调整字体大小
+            const symbol = preview.querySelector('.symbol');
+            if (symbol) {
+                symbol.style.fontSize = (120 * scaleFactor) + 'px';
+            }
+
+            // 调整气泡大小
+            const bubble1 = preview.querySelector('.bubble-1');
+            const bubble2 = preview.querySelector('.bubble-2');
+            const bubble3 = preview.querySelector('.bubble-3');
+
+            if (bubble1) {
+                bubble1.style.width = (105 * scaleFactor) + 'px';
+                bubble1.style.height = (105 * scaleFactor) + 'px';
+            }
+            if (bubble2) {
+                bubble2.style.width = (80 * scaleFactor) + 'px';
+                bubble2.style.height = (80 * scaleFactor) + 'px';
+            }
+            if (bubble3) {
+                bubble3.style.width = (65 * scaleFactor) + 'px';
+                bubble3.style.height = (65 * scaleFactor) + 'px';
+            }
+        }
+
+        function updateBackground() {
+            const color = document.getElementById('bgColor').value;
+            const preview = document.getElementById('iconPreview');
+            preview.style.background = color;
+        }
+
+        function updateFont() {
+            const fontFamily = document.getElementById('fontFamily').value;
+            const symbol = document.querySelector('.symbol');
+            if (symbol) {
+                symbol.style.fontFamily = fontFamily + ', serif';
+            }
+        }
+
+        function updateTextColor() {
+            const color = document.getElementById('textColor').value;
+            const symbol = document.querySelector('.symbol');
+            if (symbol) {
+                symbol.style.color = color;
+            }
+        }
+
+        function updateShadow() {
+            const opacity = document.getElementById('shadowOpacity').value;
+            const symbol = document.querySelector('.symbol');
+            if (symbol) {
+                symbol.style.textShadow = `4px 4px 10px rgba(0, 0, 0, ${opacity})`;
+            }
+        }
+
+        async function downloadIconSet() {
+            console.log('开始下载图标套装...');
+
+            // 检查必要的库是否加载
+            if (typeof html2canvas === 'undefined') {
+                alert('html2canvas库未加载，请刷新页面重试');
+                return;
+            }
+            if (typeof JSZip === 'undefined') {
+                alert('JSZip库未加载，请刷新页面重试');
+                return;
+            }
+            if (typeof saveAs === 'undefined') {
+                alert('FileSaver库未加载，请刷新页面重试');
+                return;
+            }
+
+            const iconType = document.getElementById('iconType').value;
+            const iconName = iconType === 'pure' ? '纯粹版' : '梦幻版';
+
+            // 显示进度提示
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = '🔄 正在生成图标...';
+            button.disabled = true;
+
+            try {
+                const zip = new JSZip();
+                const sizes = [48, 72, 96, 144, 192, 512];
+                const densities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi', 'high-res'];
+
+                for (let i = 0; i < sizes.length; i++) {
+                    const size = sizes[i];
+                    const density = densities[i];
+
+                    console.log(`生成 ${size}px 图标...`);
+                    button.textContent = `🔄 生成 ${size}px (${i + 1}/${sizes.length})...`;
+
+                    // 设置尺寸
+                    document.getElementById('iconSize').value = size;
+                    updateSize();
+
+                    // 等待DOM更新
+                    await new Promise(resolve => setTimeout(resolve, 300));
+
+                    // 截图
+                    const iconElement = document.getElementById('iconPreview');
+                    const canvas = await html2canvas(iconElement, {
+                        backgroundColor: null,
+                        scale: 2,
+                        width: size,
+                        height: size,
+                        useCORS: true,
+                        allowTaint: true
+                    });
+
+                    // 转换为blob
+                    const blob = await new Promise(resolve => {
+                        canvas.toBlob(resolve, 'image/png', 1.0);
+                    });
+
+                    if (!blob) {
+                        throw new Error(`生成 ${size}px 图标失败`);
+                    }
+
+                    // 添加到zip
+                    const fileName = size === 512 ?
+                        `ic_launcher_${iconType}_${size}px.png` :
+                        `mipmap-${density}/ic_launcher_${iconType}.png`;
+                    zip.file(fileName, blob);
+
+                    console.log(`${size}px 图标生成完成`);
+                }
+
+                button.textContent = '📦 打包下载文件...';
+                console.log('开始打包ZIP文件...');
+
+                // 生成zip文件
+                const zipBlob = await zip.generateAsync({
+                    type: 'blob',
+                    compression: 'DEFLATE',
+                    compressionOptions: { level: 6 }
+                });
+
+                console.log('ZIP文件生成完成，开始下载...');
+
+                // 下载
+                saveAs(zipBlob, `StillPage_${iconName}_图标套装.zip`);
+
+                button.textContent = '✅ 下载完成！';
+                console.log('下载完成！');
+
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                console.error('下载失败:', error);
+                alert(`下载失败: ${error.message}\n\n请检查浏览器控制台获取详细信息，或使用手动保存方式`);
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // 测试下载功能
+        function testDownload() {
+            console.log('测试下载功能...');
+
+            // 检查库是否加载
+            const status = {
+                html2canvas: typeof html2canvas !== 'undefined',
+                JSZip: typeof JSZip !== 'undefined',
+                saveAs: typeof saveAs !== 'undefined'
+            };
+
+            console.log('库加载状态:', status);
+
+            if (status.html2canvas && status.JSZip && status.saveAs) {
+                alert('✅ 所有库都已正确加载！\n\n可以尝试下载完整套装。\n\n如果仍然无法下载，请检查浏览器控制台的错误信息。');
+
+                // 简单测试
+                testSimpleDownload();
+            } else {
+                const missing = Object.keys(status).filter(key => !status[key]);
+                alert(`❌ 以下库未加载: ${missing.join(', ')}\n\n请刷新页面重试，或检查网络连接。`);
+            }
+        }
+
+        // 简单测试下载
+        async function testSimpleDownload() {
+            try {
+                const iconElement = document.getElementById('iconPreview');
+                const canvas = await html2canvas(iconElement, {
+                    backgroundColor: null,
+                    scale: 1
+                });
+
+                canvas.toBlob(blob => {
+                    if (blob) {
+                        saveAs(blob, 'test_icon.png');
+                        console.log('测试下载成功！');
+                    } else {
+                        console.error('生成blob失败');
+                    }
+                }, 'image/png');
+
+            } catch (error) {
+                console.error('测试下载失败:', error);
+                alert(`测试失败: ${error.message}`);
+            }
+        }
+
+        function downloadSize(size) {
+            // 自动设置尺寸
+            document.getElementById('iconSize').value = size;
+            updateSize();
+
+            // 获取密度信息
+            let densityInfo = '';
+            switch(size) {
+                case 48: densityInfo = ' (mipmap-mdpi)'; break;
+                case 72: densityInfo = ' (mipmap-hdpi)'; break;
+                case 96: densityInfo = ' (mipmap-xhdpi)'; break;
+                case 144: densityInfo = ' (mipmap-xxhdpi)'; break;
+                case 192: densityInfo = ' (mipmap-xxxhdpi)'; break;
+                case 512: densityInfo = ' (高清版本)'; break;
+            }
+
+            // 提示用户
+            setTimeout(() => {
+                alert(`✅ 预览已调整为 ${size}px${densityInfo}\n\n📸 现在请右键点击图标选择"图片另存为"\n💡 建议文件名：ic_launcher_${size}px.png`);
+            }, 100);
+        }
+
+        // 简单下载方法（不依赖外部库）
+        function simpleDownload() {
+            const iconType = document.getElementById('iconType').value;
+            const iconName = iconType === 'pure' ? '纯粹版' : '梦幻版';
+
+            // 创建canvas
+            const iconElement = document.getElementById('iconPreview');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // 设置canvas尺寸
+            const size = 512;
+            canvas.width = size;
+            canvas.height = size;
+
+            // 设置背景
+            const bgColor = document.getElementById('bgColor').value;
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, size, size);
+
+            if (iconType === 'pure') {
+                // 绘制"壹"字
+                const textColor = document.getElementById('textColor').value;
+                const fontFamily = document.getElementById('fontFamily').value;
+
+                ctx.fillStyle = textColor;
+                ctx.font = `bold ${size * 0.6}px ${fontFamily}, serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // 添加阴影
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+                ctx.shadowOffsetX = 4;
+                ctx.shadowOffsetY = 4;
+                ctx.shadowBlur = 10;
+
+                ctx.fillText('壹', size / 2, size / 2);
+            } else {
+                // 绘制气泡（简化版）
+                const bubbles = [
+                    { x: size * 0.23, y: size * 0.41, r: size * 0.26, color: 'rgba(173, 216, 230, 0.45)' },
+                    { x: size * 0.7, y: size * 0.5, r: size * 0.2, color: 'rgba(255, 228, 181, 0.55)' },
+                    { x: size * 0.34, y: size * 0.71, r: size * 0.16, color: 'rgba(255, 182, 193, 0.45)' }
+                ];
+
+                bubbles.forEach(bubble => {
+                    // 阴影
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
+                    ctx.shadowOffsetX = 4;
+                    ctx.shadowOffsetY = 4;
+                    ctx.shadowBlur = 15;
+
+                    ctx.fillStyle = bubble.color;
+                    ctx.beginPath();
+                    ctx.arc(bubble.x, bubble.y, bubble.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+
+            // 下载
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `StillPage_${iconName}_512px.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                alert(`✅ ${iconName}图标下载完成！\n\n文件名: StillPage_${iconName}_512px.png`);
+            }, 'image/png');
+        }
+
+        // 初始化
+        updateIcon();
+        updateFont();
+    </script>
+</body>
+</html>

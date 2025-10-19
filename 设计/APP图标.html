@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>最终图标决策 - 一页书 Stillpage</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap');
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .header-title {
+            text-align: center;
+            margin-bottom: 50px;
+            color: #333;
+        }
+
+        .header-title h1 { margin: 0 0 10px 0; font-size: 32px; }
+        .header-title p { margin: 0; color: #555; font-size: 18px; }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 60px;
+            flex-wrap: wrap;
+        }
+
+        .icon-presentation {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .icon-presentation h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0;
+            color: #222;
+        }
+
+        .icon-presentation p {
+            font-size: 15px;
+            color: #666;
+            margin: 0;
+            text-align: center;
+            line-height: 1.7;
+            max-width: 280px;
+        }
+
+        .app-icon {
+            width: 200px;
+            height: 200px;
+            border-radius: 22.5%;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+            background: #FCFCFC;
+            border: 1px solid #F0F0F0;
+        }
+        
+        /* --- 通用元素 --- */
+        .bubble { position: absolute; border-radius: 50%; }
+        .symbol { font-weight: 700; color: #333; }
+
+        /* --- 方案一：立体的气泡 --- */
+        .scheme-bubbles .bubble { box-shadow: 4px 4px 15px rgba(0, 0, 0, 0.12); }
+        .scheme-bubbles .bubble-1 { width: 105px; height: 105px; background-color: rgba(173, 216, 230, 0.45); top: 15%; left: 8%; }
+        .scheme-bubbles .bubble-2 { width: 80px; height: 80px; background-color: rgba(255, 228, 181, 0.55); top: 30%; left: 50%; }
+        .scheme-bubbles .bubble-3 { width: 65px; height: 65px; background-color: rgba(255, 182, 193, 0.45); top: 55%; left: 18%; z-index: 2; }
+
+        /* --- 方案二：浮雕的 "壹" --- */
+        .scheme-one .symbol { 
+            font-size: 120px; 
+            font-family: 'Noto Serif SC', serif; 
+            text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header-title">
+        <h1>最终决策</h1>
+        <p>一页书 Stillpage</p>
+    </div>
+
+    <div class="container">
+        
+        <div class="icon-presentation">
+            <div class="app-icon scheme-bubbles">
+                <div class="bubble bubble-1"></div><div class="bubble bubble-2"></div><div class="bubble bubble-3"></div>
+            </div>
+            <h2>立体的气泡</h2>
+            <p>代表了阅读带来的<strong>想象、梦幻与无限可能</strong>。它更感性、更轻盈、更具亲和力，能吸引追求美学和情感共鸣的用户。</p>
+        </div>
+        
+        <div class="icon-presentation">
+            <div class="app-icon scheme-one">
+                <div class="symbol">壹</div>
+            </div>
+            <h2>浮雕的 "壹"</h2>
+            <p>代表了阅读应有的<strong>专注、品质与独特价值</strong>。它更理性、更稳重、更具品牌感，能吸引追求深度和经典价值的用户。</p>
+        </div>
+
+    </div>
+
+</body>
+</html>

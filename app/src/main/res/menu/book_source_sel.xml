@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_enable_selection"
+        android:title="@string/enable_selection"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_disable_selection"
+        android:title="@string/disable_selection"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_add_group"
+        android:title="@string/add_group"
+        app:showAsAction="never" />
+        
+    <item
+        android:id="@+id/menu_remove_group"
+        android:title="@string/remove_group"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_move_to_group"
+        android:title="移动到分组"
+        app:showAsAction="never">
+        <menu>
+            <item
+                android:id="@+id/menu_move_to_novel"
+                android:title="小说"
+                app:showAsAction="never" />
+            <item
+                android:id="@+id/menu_move_to_audio"
+                android:title="听书"
+                app:showAsAction="never" />
+            <item
+                android:id="@+id/menu_move_to_music"
+                android:title="音乐"
+                app:showAsAction="never" />
+            <item
+                android:id="@+id/menu_move_to_drama"
+                android:title="短剧"
+                app:showAsAction="never" />
+            <item
+                android:id="@+id/menu_move_to_manga"
+                android:title="漫画"
+                app:showAsAction="never" />
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/menu_enable_explore"
+        android:title="@string/enable_explore"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_disable_explore"
+        android:title="@string/disable_explore"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_top_sel"
+        android:title="@string/selection_to_top"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_bottom_sel"
+        android:title="@string/selection_to_bottom"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_export_selection"
+        android:title="@string/export_selection"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_share_source"
+        android:title="@string/share_selected_source"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_check_source"
+        android:icon="@drawable/ic_check_source"
+        android:title="@string/check_select_source"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_check_selected_interval"
+        android:title="@string/check_selected_interval"
+        app:showAsAction="never" />
+
+</menu>

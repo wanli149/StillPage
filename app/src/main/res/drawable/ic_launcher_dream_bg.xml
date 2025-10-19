@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    
+    <!-- 梦幻的渐变背景 -->
+    <path
+        android:pathData="M0,0h200v200h-200z">
+        <aapt:attr name="android:fillColor" xmlns:aapt="http://schemas.android.com/aapt">
+            <gradient
+                android:type="radial"
+                android:centerX="100"
+                android:centerY="100"
+                android:gradientRadius="141.42"
+                android:startColor="#FEFEFE"
+                android:endColor="#F8F9FA" />
+        </aapt:attr>
+    </path>
+    
+    <!-- 微妙的边框 -->
+    <path
+        android:strokeColor="#F0F0F0"
+        android:strokeWidth="1"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M1,1h198v198h-198z" />
+</vector>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欢迎页最终决策 - 一页书</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap');
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header-title {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #333;
+        }
+
+        .header-title h1 { margin: 0 0 5px 0; }
+        .header-title p { margin: 0; color: #555; }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 50px;
+            flex-wrap: wrap;
+        }
+
+        .design-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .design-wrapper h2 { font-size: 18px; font-weight: 600; margin: 0; color: #222; }
+        .design-wrapper p { font-size: 14px; color: #666; margin: 0; text-align: center; line-height: 1.6; max-width: 280px;}
+
+        .welcome-screen {
+            width: 375px;
+            height: 812px;
+            background-color: #ffffff;
+            border-radius: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .content-wrapper {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* --- 版本一：动态梦幻版 --- */
+        .bubbles-version .brand-name { font-family: 'Noto Serif SC', serif; font-size: 48px; font-weight: 700; color: #1a1a1a; letter-spacing: 5px; }
+        .bubbles-version .english-name { font-size: 22px; color: #4d4d4d; letter-spacing: 1px; margin-top: 15px; margin-left: -42px; padding-left: 95px; }
+        .bubbles-version .subtitle { font-family: 'KaiTi', 'STKaiti', '中华楷体', serif; font-size: 18px; color: #666666; margin-top: 35px; line-height: 1.7; font-weight: normal; }
+        .bubbles-version .floating-bubbles-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        .bubbles-version .bubble { position: absolute; border-radius: 50%; opacity: 0; animation: float-around 25s infinite ease-in-out; }
+        
+        @keyframes float-around {
+            0% { transform: translate(0, 0); opacity: 0.7; }
+            25% { transform: translate(var(--x1, 30px), var(--y1, -80px)); }
+            50% { transform: translate(var(--x2, -40px), var(--y2, -150px)); opacity: 0.6; }
+            75% { transform: translate(var(--x3, 20px), var(--y3, -250px)); }
+            100% { transform: translate(var(--x4, 0px), var(--y4, -400px)); opacity: 0; }
+        }
+
+        /* --- 版本二：极致纯净版 --- */
+        .clean-version .symbol {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 170px;
+            font-weight: 700;
+            color: #1a1a1a;
+            /* 增加微妙的阴影，呼应图标的浮雕质感 */
+            text-shadow: 4px 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header-title">
+        <h1>欢迎页最终决策</h1>
+        <p>感性 vs. 纯粹</p>
+    </div>
+
+    <div class="container">
+        <!-- 版本一：带气泡的原版 -->
+        <div class="design-wrapper">
+            <h2>动态梦幻版</h2>
+            <div class="welcome-screen bubbles-version">
+                <div class="floating-bubbles-container" id="bubble-container"></div>
+                <div class="content-wrapper">
+                    <div class="brand-name">一页书</div>
+                    <div class="english-name">Stillpage</div>
+                    <div class="subtitle">我的世界，只有这一页书</div>
+                </div>
+            </div>
+            <p>保留了完整的品牌故事和动态气泡，强调阅读带来的<strong>想象、愉悦与无限可能</strong>。</p>
+        </div>
+
+        <!-- 版本二：极致纯净版 -->
+        <div class="design-wrapper">
+            <h2>极致纯净版</h2>
+            <div class="welcome-screen clean-version">
+                <div class="content-wrapper">
+                    <div class="symbol">壹</div>
+                </div>
+            </div>
+            <p>去掉所有干扰，仅保留带有浮雕质感的核心符号“壹”，传递出<strong>极致的专注、品质与品牌自信</strong>。</p>
+        </div>
+    </div>
+
+    <script>
+        // JS仅用于生成气泡
+        const container = document.getElementById('bubble-container');
+        if (container) {
+            const colors = [ 'rgba(135, 206, 235, 0.6)', 'rgba(255, 215, 0, 0.5)', 'rgba(255, 182, 193, 0.6)', 'rgba(144, 238, 144, 0.5)', 'rgba(221, 160, 221, 0.6)', 'rgba(255, 160, 122, 0.5)' ];
+            for (let i = 0; i < 15; i++) {
+                const bubble = document.createElement('div');
+                bubble.classList.add('bubble');
+                const size = Math.random() * 50 + 10, startX = Math.random() * 100, startY = Math.random() * 100, duration = Math.random() * 20 + 20, delay = Math.random() * 20;
+                bubble.style.cssText = `width:${size}px; height:${size}px; left:${startX}%; top:${startY}%; animation-duration:${duration}s; animation-delay:${delay}s; background-color:${colors[Math.floor(Math.random() * colors.length)]}; --x1:${Math.random()*100-50}px; --y1:${Math.random()*100-100}px; --x2:${Math.random()*100-50}px; --y2:${Math.random()*100-150}px; --x3:${Math.random()*100-50}px; --y3:${Math.random()*100-250}px; --x4:${Math.random()*100-50}px; --y4:${Math.random()*100-400}px;`;
+                container.appendChild(bubble);
+            }
+        }
+    </script>
+
+</body>
+</html>
