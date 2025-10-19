@@ -94,8 +94,31 @@ class AudioBookInfoActivity :
                         book.durChapterPos = it.second
                         appDb.bookDao.update(book)
                     }
-                    // 跳转到音频播放页面而不是阅读页面
-                    startAudioPlay(book)
+                    
+                    val sameBook = AudioPlay.book?.bookUrl == book.bookUrl
+                    
+                    // 如果当前有音频在播放且是同一本书，需要切换章节
+                    if (sameBook && (AudioPlay.status == Status.PLAY || AudioPlay.status == Status.PAUSE)) {
+                        AppLog.put("AudioBookInfoActivity: 目录切换章节，当前播放同一本书，直接切换到章节${it.first}")
+                        // 直接切换到新章节，skipTo会自动开始播放
+                        AudioPlay.skipTo(it.first)
+                        // 跳转到播放页面，不需要autoPlay参数，因为skipTo已经开始播放了
+                        startActivity<AudioPlayActivity> {
+                            putExtra("bookUrl", book.bookUrl)
+                            putExtra("inBookshelf", viewModel.inBookshelf)
+                        }
+                    } else if (!sameBook && (AudioPlay.status == Status.PLAY || AudioPlay.status == Status.PAUSE)) {
+                        // 如果当前播放的是其他书，先停止并保存进度
+                        AppLog.put("AudioBookInfoActivity: 目录切换章节，当前播放其他书籍，先停止并保存进度")
+                        AudioPlay.stop()
+                        // 等待停止完成后再开始新的播放
+                        kotlinx.coroutines.delay(500)
+                        startAudioPlay(book)
+                    } else {
+                        // 没有播放或停止状态，直接启动播放（从选择的章节开始）
+                        AppLog.put("AudioBookInfoActivity: 目录切换章节，当前无播放状态，启动新播放")
+                        startAudioPlay(book)
+                    }
                 }
             }
         } ?: let {
@@ -353,13 +376,31 @@ class AudioBookInfoActivity :
             if (AppConfig.enableHaptics) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             viewModel.getBook()?.let { book ->
                 val sameBook = AudioPlay.book?.bookUrl == book.bookUrl
+                
+                // 如果当前有其他音频在播放，先停止并保存进度
+                if (!sameBook && (AudioPlay.status == Status.PLAY || AudioPlay.status == Status.PAUSE)) {
+                    AppLog.put("AudioBookInfoActivity: 检测到其他音频正在播放，先停止并保存进度")
+                    AudioPlay.stop() // 停止当前播放并保存进度
+                    // 等待停止完成后再开始新的播放
+                    lifecycleScope.launch {
+                        kotlinx.coroutines.delay(500) // 等待停止操作完成
+                        startAudioPlay(book)
+                    }
+                    return@setOnClickListener
+                }
+                
                 when (AudioPlay.status) {
                     Status.PLAY -> {
-                        // 正在播放：进入播放页但不强制自动播放
-                        startActivity<AudioPlayActivity> {
-                            putExtra("bookUrl", book.bookUrl)
-                            putExtra("inBookshelf", viewModel.inBookshelf)
-                            putExtra("autoPlay", false)
+                        if (sameBook) {
+                            // 正在播放同一本书：进入播放页
+                            startActivity<AudioPlayActivity> {
+                                putExtra("bookUrl", book.bookUrl)
+                                putExtra("inBookshelf", viewModel.inBookshelf)
+                                putExtra("autoPlay", false)
+                            }
+                        } else {
+                            // 不应该到这里，因为上面已经处理了
+                            startAudioPlay(book)
                         }
                     }
                     Status.PAUSE -> {
@@ -372,12 +413,12 @@ class AudioBookInfoActivity :
                                 putExtra("autoPlay", false)
                             }
                         } else {
-                            // 暂停的是其他书：从详情页开始新的播放（确保数据保存）
+                            // 不应该到这里，因为上面已经处理了
                             startAudioPlay(book)
                         }
                     }
                     else -> {
-                        // 无播放或停止：启动播放（确保数据保存）
+                        // 无播放或停止：启动播放
                         startAudioPlay(book)
                     }
                 }

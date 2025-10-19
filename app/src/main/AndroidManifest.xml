@@ -106,6 +106,13 @@
         <activity
             android:name=".ui.book.audio.AudioPlayActivity"
             android:launchMode="singleTask" />
+        
+        <!-- 视频播放界面 -->
+        <activity
+            android:name=".ui.book.video.VideoPlayActivity"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:supportsPictureInPicture="true" />
 
         <!-- 音乐播放中转页面 -->
         <activity
@@ -454,6 +461,9 @@
             android:foregroundServiceType="mediaPlayback" />
         <service
             android:name=".service.AudioPlayService"
+            android:foregroundServiceType="mediaPlayback" />
+        <service
+            android:name=".service.VideoPlayService"
             android:foregroundServiceType="mediaPlayback" />
         <service
             android:name=".service.DownloadService"

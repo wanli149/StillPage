@@ -33,4 +33,14 @@ object EventBus {
     const val EXPORT_BOOK = "exportBook"
     const val UP_MANGA_CONFIG = "upMangaConfig"
     const val PLAY_MODE_CHANGED = "playModeChanged"
+    
+    // 视频播放相关事件
+    const val VIDEO_STATE = "videoState"
+    const val VIDEO_PROGRESS = "videoProgress"
+    const val VIDEO_BUFFER_PROGRESS = "videoBufferProgress"
+    const val VIDEO_SIZE = "videoSize"
+    const val VIDEO_SPEED = "videoSpeed"
+    const val VIDEO_CHAPTER_CHANGE = "videoChapterChange"
+    const val VIDEO_SEEK = "videoSeek"
+    const val VIDEO_PIP_REQUEST = "videoPipRequest"
 }

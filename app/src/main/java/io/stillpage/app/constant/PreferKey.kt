@@ -199,6 +199,10 @@ object PreferKey {
 
     // AudioPlay扩展配置
     const val audioPlaySpeed = "audioPlaySpeed"
+    
+    // VideoPlay配置
+    const val videoPlayWakeLock = "videoPlayWakeLock"
+    const val videoPlaySpeed = "videoPlaySpeed"
     const val enableHaptics = "enableHaptics"
     const val saveThrottleMs = "audioSaveThrottleMs"
 

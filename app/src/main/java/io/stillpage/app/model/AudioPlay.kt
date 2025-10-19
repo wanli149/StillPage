@@ -97,7 +97,14 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun resetData(book: Book) {
-        stop()
+        // 如果当前有不同的书在播放，先保存进度并停止
+        val currentBook = AudioPlay.book
+        if (currentBook != null && currentBook.bookUrl != book.bookUrl) {
+            AppLog.put("AudioPlay: 切换到新书籍，保存当前进度: ${currentBook.name} -> ${book.name}")
+            saveRead() // 保存当前书籍的进度
+            stop() // 停止当前播放
+        }
+        
         AudioPlay.book = book
         chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
         simulatedChapterSize = if (book.readSimulating()) {
@@ -297,11 +304,17 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun stop() {
+        AppLog.put("AudioPlay: 请求停止播放")
+        // 先保存当前进度
+        saveRead()
         if (AudioPlayService.isRun) {
             context.startService<AudioPlayService> {
                 action = IntentAction.stop
             }
         }
+        // 更新状态
+        status = Status.STOP
+        postEvent(EventBus.AUDIO_STATE, Status.STOP)
     }
 
     fun adjustSpeed(adjust: Float) {
@@ -326,12 +339,15 @@ object AudioPlay : CoroutineScope by MainScope() {
 
     fun skipTo(index: Int) {
         Coroutine.async {
+            AppLog.put("AudioPlay: 跳转到章节 $index，当前状态: $status")
             stopPlay()
             durChapterIndex = index
             durChapterPos = 0
             durPlayUrl = ""
             saveRead()
+            // loadPlayUrl会通过upPlayUrl自动开始播放
             loadPlayUrl()
+            AppLog.put("AudioPlay: 章节跳转请求已发送，等待加载完成后自动播放")
         }
     }
 

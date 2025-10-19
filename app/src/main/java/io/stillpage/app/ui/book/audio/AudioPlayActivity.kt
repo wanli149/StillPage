@@ -33,6 +33,7 @@ import io.stillpage.app.lib.dialogs.alert
 import io.stillpage.app.model.AudioPlay
 import io.stillpage.app.model.BookCover
 import io.stillpage.app.service.AudioPlayService
+import io.stillpage.app.constant.AppLog
 import io.stillpage.app.ui.about.AppLogDialog
 import io.stillpage.app.ui.book.changesource.ChangeBookSourceDialog
 import io.stillpage.app.ui.book.source.edit.BookSourceEditActivity
@@ -377,6 +378,10 @@ class AudioPlayActivity :
 
     override fun onDestroy() {
         super.onDestroy()
+        // 确保在Activity销毁时保存进度
+        AppLog.put("AudioPlayActivity: Activity销毁，保存进度")
+        AudioPlay.saveRead()
+        
         if (AudioPlay.status != Status.PLAY) {
             AudioPlay.stop()
         }

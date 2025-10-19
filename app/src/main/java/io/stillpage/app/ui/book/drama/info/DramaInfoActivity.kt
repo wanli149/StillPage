@@ -42,11 +42,12 @@ import io.stillpage.app.utils.toastOnUi
 import io.stillpage.app.utils.viewbindingdelegate.viewBinding
 import io.stillpage.app.utils.visible
 import io.stillpage.app.data.appDb
-import io.stillpage.app.ui.browser.WebViewActivity
+
 import io.stillpage.app.ui.widget.TitleBar
 import io.stillpage.app.model.webBook.WebBook
 import io.stillpage.app.ui.book.read.ReadBookActivity
 import io.stillpage.app.ui.book.audio.AudioPlayActivity
+import io.stillpage.app.ui.book.video.VideoPlayActivity
 import io.stillpage.app.help.book.isDrama
 import io.stillpage.app.help.book.isWebFile
 import io.stillpage.app.help.book.isAudio
@@ -210,8 +211,14 @@ class DramaInfoActivity :
         // 立即播放按钮
         binding.btnPlay.setOnClickListener {
             viewModel.getBook()?.let { book ->
+                // 添加调试日志
+                AppLog.put("DramaInfoActivity: 播放按钮点击 - 书籍: ${book.name}")
+                AppLog.put("DramaInfoActivity: isDrama检查 - ${book.isDrama}")
+                AppLog.put("DramaInfoActivity: 书籍信息 - name: ${book.name}, kind: ${book.kind}, intro: ${book.intro?.take(100)}")
+                
                 // 如果本条目实际上是书籍（非短剧），直接进入阅读逻辑（与 BookInfoActivity 保持一致）
                 if (!book.isDrama) {
+                    AppLog.put("DramaInfoActivity: 书籍未被识别为短剧，跳转到阅读页面")
                     // 书籍：进入阅读流程（如果是 webFile 则提示下载）
                     if (book.isWebFile) {
                         // 与书籍详情一致的处理
@@ -223,6 +230,8 @@ class DramaInfoActivity :
                     }
                     return@let
                 }
+                
+                AppLog.put("DramaInfoActivity: 书籍被识别为短剧，准备启动视频播放器")
 
                 // 短剧：如果章节列表为空，先加载章节信息
                 if (episodeAdapter.itemCount == 0) {
@@ -257,14 +266,25 @@ class DramaInfoActivity :
     }
 
     private fun startReadActivity(book: Book) {
+        AppLog.put("DramaInfoActivity: startReadActivity - 书籍: ${book.name}")
+        AppLog.put("DramaInfoActivity: startReadActivity - isAudio: ${book.isAudio}, isDrama: ${book.isDrama}")
+        
         when {
             book.isAudio -> {
+                AppLog.put("DramaInfoActivity: 启动音频播放器")
                 startActivity(Intent(this, AudioPlayActivity::class.java)
                     .putExtra("bookUrl", book.bookUrl)
                     .putExtra("inBookshelf", viewModel.inBookshelf))
             }
+            
+            book.isDrama -> {
+                AppLog.put("DramaInfoActivity: 在startReadActivity中检测到短剧，启动视频播放器")
+                // 短剧应该启动视频播放器
+                startDramaPlay(book, book.durChapterIndex)
+            }
 
             else -> {
+                AppLog.put("DramaInfoActivity: 启动文本阅读器")
                 startActivity(Intent(this, ReadBookActivity::class.java)
                     .putExtra("bookUrl", book.bookUrl)
                     .putExtra("inBookshelf", viewModel.inBookshelf)
@@ -474,135 +494,104 @@ class DramaInfoActivity :
     }
 
     /**
-     * 开始播放短剧（增强容错）
+     * 开始播放短剧（使用ExoPlayer播放器）
      */
     private fun startDramaPlay(book: Book, episode: Int) {
-        AppLog.put("DramaInfoActivity: 请求播放短剧 ${book.name} 第${episode + 1}集")
+        AppLog.put("DramaInfoActivity: 启动ExoPlayer播放短剧 ${book.name} 第${episode + 1}集")
 
-        // 使用 WebView 播放短剧视频（HTML5 视频播放）
         lifecycleScope.launch {
-            // 先持久化播放进度到数据库，确保书架依据历史继续播放
-            withContext(IO) {
-                book.durChapterIndex = episode
-                book.durChapterPos = 0
-                appDb.bookDao.update(book)
-            }
-            val chapter = withContext(IO) {
-                // 获取当前章节信息（从数据库尝试读取）
-                appDb.bookChapterDao.getChapter(book.bookUrl, episode)
-            }
-            // 数据库未命中时，尝试使用内存中的章节列表，优先播放
-            val memChapter = chapter ?: viewModel.chapterListData.value?.getOrNull(episode)
-            if (memChapter != null) {
-                val src = if (chapter != null) "数据库" else "内存"
-                AppLog.put("DramaInfoActivity: 找到章节（$src），开始播放 ${memChapter.url ?: "无播放链接"}")
-                playChapterInWebView(memChapter)
-                return@launch
-            }
+            try {
+                // 先持久化播放进度到数据库
+                withContext(IO) {
+                    book.durChapterIndex = episode
+                    book.durChapterPos = 0
+                    appDb.bookDao.update(book)
+                }
 
-            if (chapter != null) {
-                // 章节已存在，继续播放流程
-                AppLog.put("DramaInfoActivity: 找到章节，开始播放 ${chapter.url ?: "无播放链接"}")
-                // （调用已有播放逻辑，例如打开 WebView 或播放器）
-                playChapterInWebView(chapter)
-                return@launch
-            }
+                // 获取章节信息
+                val chapter = withContext(IO) {
+                    appDb.bookChapterDao.getChapter(book.bookUrl, episode)
+                } ?: viewModel.chapterListData.value?.getOrNull(episode)
 
-            // 若未找到章节，使用 ViewModel 正式触发目录加载（调用公开方法）
-            AppLog.put("DramaInfoActivity: 本地未找到章节，调用 ViewModel.loadBookInfo 加载目录")
-            toastOnUi(R.string.toc_updateing)
-            // 触发目录加载；加载完成后将通过 LiveData 回调到 observe 中再调用 startDramaPlay
-            // 使用位置参数以避免命名参数在不同签名上的兼容问题
-            viewModel.loadBookInfo(book, true, false)
+                if (chapter != null) {
+                    // 找到章节，启动VideoPlayActivity
+                    val src = if (withContext(IO) { appDb.bookChapterDao.getChapter(book.bookUrl, episode) } != null) "数据库" else "内存"
+                    AppLog.put("DramaInfoActivity: 找到章节（$src），启动ExoPlayer播放器")
+                    
+                    startVideoPlayActivity(book, chapter, episode)
+                } else {
+                    // 未找到章节，先加载目录
+                    AppLog.put("DramaInfoActivity: 章节不存在，开始加载目录")
+                    toastOnUi("正在加载章节信息...")
+                    
+                    // 设置标志，目录加载完成后自动播放
+                    playRequested = true
+                    viewModel.loadBookInfo(book, true, false)
+                }
+                
+            } catch (e: Exception) {
+                AppLog.put("DramaInfoActivity: 启动播放失败", e)
+                toastOnUi("启动播放失败: ${e.message}")
+            }
         }
     }
 
-    // 将章节在内置 WebView 中播放（复用已有浏览器页面实现）
-    private fun playChapterInWebView(chapter: BookChapter) {
-        val book = viewModel.getBook() ?: return
-        lifecycleScope.launch {
-            var url = chapter.getAbsoluteURL()
-            // 如果链接不是视频直链或为空，尝试解析正文提取真实视频链接
-            if (!isDirectVideoUrl(url) || url.isBlank()) {
-                viewModel.bookSource?.let { source ->
-                    val content = withContext(IO) {
-                        io.stillpage.app.model.webBook.WebBook.getContentAwait(
-                            source,
-                            book,
-                            chapter,
-                            nextChapterUrl = null,
-                            needSave = false
-                        )
-                    }
-                    val extracted = extractVideoUrl(content)
-                    if (isDirectVideoUrl(extracted)) {
-                        url = extracted
-                    } else if (url.isNotBlank()) {
-                        // 回退1：通过 AnalyzeUrl 使用 WebView 渲染抓取页面再提取直链
-                        val renderedHtml = fetchRenderedPageContent(url, book.bookUrl)
-                        var candidate = extractVideoUrl(renderedHtml)
-                        if (!isDirectVideoUrl(candidate)) {
-                            // 回退2：直接抓取页面HTML并尝试提取直链
-                            val pageHtml = fetchPageContent(url)
-                            candidate = extractVideoUrl(pageHtml)
-                        }
-                        if (isDirectVideoUrl(candidate)) {
-                            url = candidate
-                        }
-                    }
-                }
+    /**
+     * 启动VideoPlayActivity
+     */
+    private fun startVideoPlayActivity(book: Book, chapter: BookChapter, episode: Int) {
+        try {
+            val intent = Intent(this, io.stillpage.app.ui.book.video.VideoPlayActivity::class.java).apply {
+                // 传递基本信息
+                putExtra("bookUrl", book.bookUrl)
+                putExtra("chapterIndex", episode)
+                putExtra("chapterUrl", chapter.getAbsoluteURL())
+                putExtra("title", "${book.name} 第${episode + 1}集")
+                
+                // 传递书源信息
+                putExtra("bookSource", viewModel.bookSource)
+                
+                // 传递书架状态
+                putExtra("inBookshelf", viewModel.inBookshelf)
+                
+                // 传递章节信息
+                putExtra("chapterTitle", chapter.title)
             }
-
-            if (url.isBlank()) {
-                toastOnUi("未找到有效播放链接")
-                return@launch
-            }
-
-            val title = "${book.name} 第${chapter.index + 1}集"
-            AppLog.put("DramaInfoActivity: playChapterInWebView -> $url")
-
-            // 回归旧逻辑：统一走内置 WebView 播放/展示
-            val intent = Intent(this@DramaInfoActivity, WebViewActivity::class.java).apply {
-                putExtra("title", title)
-                putExtra("url", url)
-                putExtra("sourceName", book.originName)
-                putExtra("sourceOrigin", book.origin)
-                putExtra("sourceType", io.stillpage.app.constant.SourceType.book)
-            }
+            
             startActivity(intent)
+            AppLog.put("DramaInfoActivity: 成功启动VideoPlayActivity")
+            
+        } catch (e: Exception) {
+            AppLog.put("DramaInfoActivity: 启动VideoPlayActivity失败", e)
+            toastOnUi("启动视频播放器失败")
+            
+            // 如果启动失败，可以考虑回退到其他方案
+            handleVideoPlayFailure(chapter)
         }
     }
 
-    private suspend fun fetchPageContent(url: String): String {
-        return withContext(IO) {
-            try {
-                val req = Request.Builder().url(url).get().build()
-                okHttpClient.newCall(req).execute().use { resp ->
-                    resp.body?.string().orEmpty()
+    /**
+     * 处理视频播放失败的情况
+     */
+    private fun handleVideoPlayFailure(chapter: BookChapter) {
+        AppLog.put("DramaInfoActivity: 处理视频播放失败")
+        
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("播放失败")
+            .setMessage("无法启动视频播放器，是否重试？")
+            .setPositiveButton("重试") { _, _ ->
+                // 重新尝试播放
+                val book = viewModel.getBook()
+                if (book != null) {
+                    startDramaPlay(book, book.durChapterIndex)
                 }
-            } catch (e: Exception) {
-                AppLog.put("DramaInfoActivity: 页面抓取失败", e, true)
-                ""
             }
-        }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
-    private suspend fun fetchRenderedPageContent(url: String, baseUrl: String): String {
-        return withContext(IO) {
-            try {
-                val analyze = AnalyzeUrl(
-                    mUrl = url,
-                    baseUrl = baseUrl,
-                    source = viewModel.bookSource
-                )
-                val res = analyze.getStrResponseAwait(useWebView = true)
-                res.body ?: ""
-            } catch (e: Exception) {
-                AppLog.put("DramaInfoActivity: WebView渲染抓取失败", e, true)
-                ""
-            }
-        }
-    }
+    // 已移除：playChapterInWebView 方法及相关辅助方法
+    // 所有视频播放现在统一使用 VideoPlayActivity
 
     /**
      * 从内容中提取视频播放链接

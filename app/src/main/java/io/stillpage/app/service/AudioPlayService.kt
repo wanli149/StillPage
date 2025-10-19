@@ -172,6 +172,11 @@ class AudioPlayService : BaseService(),
                 }
 
                 IntentAction.stopPlay -> {
+                    // 停止播放前先保存当前播放位置和进度
+                    AppLog.put("AudioPlayService: 停止播放，保存进度")
+                    // 确保保存最新的播放位置
+                    AudioPlay.playPositionChanged(exoPlayer.currentPosition.toInt())
+                    AudioPlay.saveRead()
                     exoPlayer.stop()
                     upPlayProgressJob?.cancel()
                     AudioPlay.status = Status.STOP
@@ -189,7 +194,12 @@ class AudioPlayService : BaseService(),
                     adjustProgress(intent.getIntExtra("position", position))
                 }
 
-                IntentAction.stop -> stopSelf()
+                IntentAction.stop -> {
+                    // 停止服务前先保存进度
+                    AppLog.put("AudioPlayService: 停止服务，保存进度")
+                    AudioPlay.saveRead()
+                    stopSelf()
+                }
             }
         }
         return super.onStartCommand(intent, flags, startId)
@@ -197,6 +207,10 @@ class AudioPlayService : BaseService(),
 
     override fun onDestroy() {
         super.onDestroy()
+        // 服务销毁前保存进度
+        AppLog.put("AudioPlayService: 服务销毁，保存进度")
+        AudioPlay.saveRead()
+        
         if (useWakeLock) {
             wakeLock.release()
             wifiLock?.release()
@@ -266,6 +280,8 @@ class AudioPlayService : BaseService(),
             }
             upPlayProgressJob?.cancel()
             position = exoPlayer.currentPosition.toInt()
+            // 确保AudioPlay模型中的位置也得到更新
+            AudioPlay.playPositionChanged(position)
             if (exoPlayer.isPlaying) exoPlayer.pause()
             upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PAUSED)
             AudioPlay.status = Status.PAUSE

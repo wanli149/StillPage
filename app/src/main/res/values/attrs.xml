@@ -9,6 +9,14 @@
         <enum name="auto" value="0" />
     </attr>
 
+    <!-- Material Design 3 兼容属性 -->
+    <attr name="colorOnPrimary" format="color|reference" />
+    <attr name="colorOnSurface" format="color|reference" />
+    <attr name="colorOnSurfaceVariant" format="color|reference" />
+    <attr name="colorSurface" format="color|reference" />
+    <attr name="colorSurfaceVariant" format="color|reference" />
+    <attr name="colorOutline" format="color|reference" />
+
     <declare-styleable name="TitleBar">
         <attr name="title" />
         <attr name="subtitle" />

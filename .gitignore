@@ -16,3 +16,6 @@ package-lock.json
 .idea/
 # Kotlin 2.0
 .kotlin/
+CHAPTER_SWITCH_FIX_TEST.md
+AUDIO_PLAY_FIX_SUMMARY.md
+日志.txt

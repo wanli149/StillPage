@@ -11,6 +11,13 @@
     <color name="background_menu">@color/md_grey_800</color>
     <color name="background_prefs">#10303030</color>
 
+    <!-- 文本颜色 -->
+    <color name="textColorPrimary">@color/primaryText</color>
+    <color name="textColorSecondary">@color/secondaryText</color>
+
+    <!-- 边框颜色 -->
+    <color name="colorOutline">@color/md_grey_600</color>
+
     <color name="night_mask">#69000000</color>
 
     <color name="transparent10">#10ffffff</color>

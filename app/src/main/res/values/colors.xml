@@ -138,4 +138,9 @@
     <color name="ate_navigation_drawer_selected_dark">#202020</color>
 
     <color name="book_ant_10">#141414</color>
+    
+    <!-- 视频播放器相关颜色 -->
+    <color name="semi_transparent_black">#80000000</color>
+    <color name="video_control_background">#CC000000</color>
+    <color name="video_overlay_text">#FFFFFF</color>
 </resources>

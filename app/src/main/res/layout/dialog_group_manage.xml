@@ -24,7 +24,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="分组管理"
-            android:textColor="?attr/colorOnPrimary"
+            android:textColor="@android:color/white"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -37,7 +37,7 @@
             android:contentDescription="关闭"
             android:focusable="true"
             android:src="@drawable/ic_close"
-            app:tint="?attr/colorOnPrimary" />
+            app:tint="@android:color/white" />
 
     </LinearLayout>
 

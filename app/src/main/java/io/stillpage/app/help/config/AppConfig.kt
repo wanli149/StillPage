@@ -679,6 +679,20 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefString(PreferKey.audioPlaySpeed, value.toString())
         }
 
+    // 视频播放唤醒锁
+    var videoPlayUseWakeLock: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.videoPlayWakeLock, true)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.videoPlayWakeLock, value)
+        }
+
+    // 视频播放速度（持久化）
+    var videoPlaySpeed: Float
+        get() = appCtx.getPrefString(PreferKey.videoPlaySpeed, "1.0")?.toFloatOrNull() ?: 1.0f
+        set(value) {
+            appCtx.putPrefString(PreferKey.videoPlaySpeed, value.toString())
+        }
+
     // 触觉反馈开关
     var enableHaptics: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.enableHaptics, false)

@@ -73,4 +73,34 @@
         android:title="选择音轨…"
         app:showAsAction="never" />
 
+    <!-- 视频质量选择 -->
+    <item
+        android:id="@+id/action_video_quality"
+        android:title="视频质量"
+        app:showAsAction="never" />
+
+    <!-- 播放列表管理 -->
+    <item
+        android:id="@+id/action_playlist"
+        android:title="播放列表"
+        app:showAsAction="never" />
+
+    <!-- 循环播放模式 -->
+    <item
+        android:id="@+id/action_loop_mode"
+        android:title="循环模式"
+        app:showAsAction="never" />
+
+    <!-- 视频信息 -->
+    <item
+        android:id="@+id/action_video_info"
+        android:title="视频信息"
+        app:showAsAction="never" />
+
+    <!-- 缓存管理 -->
+    <item
+        android:id="@+id/action_cache_manage"
+        android:title="缓存管理"
+        app:showAsAction="never" />
+
 </menu>
