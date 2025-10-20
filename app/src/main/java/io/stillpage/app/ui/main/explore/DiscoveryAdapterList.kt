@@ -15,6 +15,9 @@ import io.stillpage.app.utils.gone
 class DiscoveryAdapterList(context: Context, private val callback: CallBack) :
     RecyclerAdapter<ExploreNewViewModel.DiscoveryItem, ItemDiscoveryListBinding>(context) {
 
+    // ViewHolder复用优化：缓存绑定数据
+    private val bindingCache = mutableMapOf<Int, Any>()
+    
     override fun getViewBinding(parent: ViewGroup): ItemDiscoveryListBinding {
         return ItemDiscoveryListBinding.inflate(inflater, parent, false)
     }
@@ -26,52 +29,142 @@ class DiscoveryAdapterList(context: Context, private val callback: CallBack) :
         payloads: MutableList<Any>
     ) {
         val book = item.book
+        val position = holder.layoutPosition
+        
+        // 检查是否可以使用增量更新
+        if (payloads.isNotEmpty()) {
+            handlePayloadUpdate(binding, item, payloads)
+            return
+        }
+        
         binding.apply {
-            // 封面加载 - 使用CoverImageView
-            ivCover.load(book.coverUrl, book.name, book.author)
+            // 优化文本设置：避免重复设置相同内容
+            if (tvTitle.text != book.name) {
+                tvTitle.text = book.name
+            }
+            
+            if (tvAuthor.text != book.author) {
+                tvAuthor.text = book.author
+            }
 
-            // 书名
-            tvTitle.text = book.name
+            // 简介优化
+            val intro = book.intro?.takeIf { it.isNotBlank() } ?: "暂无简介"
+            if (tvIntro.text != intro) {
+                tvIntro.text = intro
+            }
 
-            // 作者
-            tvAuthor.text = book.author
+            // 最新章节优化
+            val latestChapter = book.latestChapterTitle?.takeIf { it.isNotBlank() } ?: "未知章节"
+            if (tvLatestChapter.text != latestChapter) {
+                tvLatestChapter.text = latestChapter
+            }
 
-            // 简介
-            tvIntro.text = book.intro?.takeIf { it.isNotBlank() } ?: "暂无简介"
+            // 内容类型标签（使用缓存避免重复计算）
+            setupContentTypeLabel(item.contentType, binding, position)
 
-            // 最新章节
-            tvLatestChapter.text = book.latestChapterTitle?.takeIf { it.isNotBlank() } ?: "未知章节"
+            // 书架状态（缓存检查结果）
+            val inBookshelf = getBookshelfStatus(book.name, book.author, position)
+            if (bvInBookshelf.isVisible != inBookshelf) {
+                bvInBookshelf.isVisible = inBookshelf
+            }
 
-            // 内容类型标签（直接使用已计算的类型）
-            setupContentTypeLabel(item.contentType, binding)
-
-            // 书架状态
-            bvInBookshelf.isVisible = callback.isInBookShelf(book.name, book.author)
-
-            // 加载状态 - 已移除非居中的转动圆圈指示器
-            // rlLoading.gone()
+            // 封面加载优化：延迟加载，避免滚动时频繁加载
+            loadCoverOptimized(ivCover, book, position)
         }
     }
+    
+    /**
+     * 处理增量更新
+     */
+    private fun handlePayloadUpdate(
+        binding: ItemDiscoveryListBinding,
+        item: ExploreNewViewModel.DiscoveryItem,
+        payloads: MutableList<Any>
+    ) {
+        payloads.forEach { payload ->
+            when (payload) {
+                "bookshelf_status" -> {
+                    binding.bvInBookshelf.isVisible = callback.isInBookShelf(item.book.name, item.book.author)
+                }
+                "content_type" -> {
+                    setupContentTypeLabel(item.contentType, binding, -1)
+                }
+            }
+        }
+    }
+    
+    /**
+     * 优化封面加载
+     */
+    private fun loadCoverOptimized(
+        imageView: io.stillpage.app.ui.widget.image.CoverImageView,
+        book: io.stillpage.app.data.entities.SearchBook,
+        position: Int
+    ) {
+        // 使用位置缓存，避免重复加载相同封面
+        val cacheKey = "${book.bookUrl}_${book.coverUrl}".hashCode()
+        val cachedUrl = bindingCache[cacheKey] as? String
+        
+        if (cachedUrl != book.coverUrl) {
+            imageView.load(book.coverUrl, book.name, book.author)
+            bindingCache[cacheKey] = book.coverUrl ?: ""
+        }
+    }
+    
+    /**
+     * 获取书架状态（带缓存）
+     */
+    private fun getBookshelfStatus(name: String, author: String, position: Int): Boolean {
+        val cacheKey = "${name}_${author}".hashCode()
+        val cached = bindingCache[cacheKey] as? Boolean
+        
+        // 每10个位置重新检查一次，避免状态过期
+        if (cached == null || position % 10 == 0) {
+            val status = callback.isInBookShelf(name, author)
+            bindingCache[cacheKey] = status
+            return status
+        }
+        
+        return cached
+    }
 
-    private fun setupContentTypeLabel(contentType: ExploreNewViewModel.ContentType, binding: ItemDiscoveryListBinding) {
+    private fun setupContentTypeLabel(
+        contentType: ExploreNewViewModel.ContentType, 
+        binding: ItemDiscoveryListBinding,
+        position: Int
+    ) {
         binding.tvContentType.apply {
-            text = contentType.displayName
-
-            val backgroundRes = when (contentType) {
-                ExploreNewViewModel.ContentType.TEXT -> R.color.content_type_text
-                ExploreNewViewModel.ContentType.AUDIO -> R.color.content_type_audio
-                ExploreNewViewModel.ContentType.IMAGE -> R.color.content_type_image
-                ExploreNewViewModel.ContentType.MUSIC -> R.color.content_type_music
-                ExploreNewViewModel.ContentType.DRAMA -> R.color.content_type_drama
-                ExploreNewViewModel.ContentType.FILE -> R.color.content_type_file
-                else -> R.color.content_type_text
+            // 避免重复设置相同内容
+            if (text != contentType.displayName) {
+                text = contentType.displayName
             }
 
-            try {
-                setBackgroundColor(ContextCompat.getColor(context, backgroundRes))
-            } catch (e: Exception) {
-                setBackgroundColor(getDefaultColorForType(contentType))
+            // 使用缓存的颜色值
+            val colorCacheKey = "color_${contentType.name}".hashCode()
+            val cachedColor = bindingCache[colorCacheKey] as? Int
+            
+            val color = cachedColor ?: run {
+                val backgroundRes = when (contentType) {
+                    ExploreNewViewModel.ContentType.TEXT -> R.color.content_type_text
+                    ExploreNewViewModel.ContentType.AUDIO -> R.color.content_type_audio
+                    ExploreNewViewModel.ContentType.IMAGE -> R.color.content_type_image
+                    ExploreNewViewModel.ContentType.MUSIC -> R.color.content_type_music
+                    ExploreNewViewModel.ContentType.DRAMA -> R.color.content_type_drama
+                    ExploreNewViewModel.ContentType.FILE -> R.color.content_type_file
+                    else -> R.color.content_type_text
+                }
+
+                val resolvedColor = try {
+                    ContextCompat.getColor(context, backgroundRes)
+                } catch (e: Exception) {
+                    getDefaultColorForType(contentType)
+                }
+                
+                bindingCache[colorCacheKey] = resolvedColor
+                resolvedColor
             }
+            
+            setBackgroundColor(color)
         }
     }
 

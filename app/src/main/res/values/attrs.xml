@@ -243,4 +243,13 @@
             <enum name="right_bottom_fill" value="7" />
         </attr>
     </declare-styleable>
+
+    <!-- 骨架屏组件属性 -->
+    <declare-styleable name="SkeletonView">
+        <attr name="skeletonType">
+            <enum name="grid_item" value="0" />
+            <enum name="list_item" value="1" />
+            <enum name="custom" value="2" />
+        </attr>
+    </declare-styleable>
 </resources>

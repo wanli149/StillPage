@@ -27,37 +27,75 @@ object ExploreCacheManager {
         val sourceUrls: List<String>
     )
 
+    // 缓存配置预设模板
+    enum class CacheTemplate(
+        val displayName: String,
+        val maxCacheSize: Int,
+        val defaultTtlMinutes: Int,
+        val maxBooksPerPage: Int
+    ) {
+        FAST("快速模式", 30, 15, 80),      // 快速响应，较短缓存
+        BALANCED("平衡模式", 50, 30, 100), // 默认平衡配置
+        POWER("省电模式", 80, 60, 120),    // 长缓存，减少网络请求
+        UNLIMITED("无限模式", 200, 120, 150) // 最大缓存，适合WiFi环境
+    }
+
     // 缓存配置
     data class CacheConfig(
-        val maxCacheSize: Int = 50, // 最大缓存页数
-        val cacheExpireTime: Long = 30 * 60 * 1000L, // 默认过期 30分钟
-        val maxBooksPerPage: Int = 100, // 每页最大书籍数
-        val enableDiskCache: Boolean = true, // 是否启用磁盘缓存
-        val typeTtlMs: MutableMap<ContentType, Long> = mutableMapOf(), // 按内容类型 TTL
-        val sourceTtlMs: MutableMap<String, Long> = mutableMapOf() // 按书源 TTL（bookSourceUrl）
+        val template: CacheTemplate = CacheTemplate.BALANCED,
+        val maxCacheSize: Int = template.maxCacheSize,
+        val cacheExpireTime: Long = template.defaultTtlMinutes * 60 * 1000L,
+        val maxBooksPerPage: Int = template.maxBooksPerPage,
+        val enableDiskCache: Boolean = true,
+        val typeTtlMs: MutableMap<ContentType, Long> = mutableMapOf(),
+        val sourceTtlMs: MutableMap<String, Long> = mutableMapOf()
     )
 
     private val memoryCache = ConcurrentHashMap<String, CacheItem>()
     private val cacheMutex = Mutex()
-    private val config = CacheConfig()
+    private var config = CacheConfig()
     
-    // 缓存大小限制
-    private const val MAX_MEMORY_CACHE_SIZE = 100
-    private const val CACHE_CLEANUP_THRESHOLD = 80
+    // 缓存访问频率统计（用于LRU + 频率算法）
+    private val accessFrequency = ConcurrentHashMap<String, Int>()
+    private val lastAccessTime = ConcurrentHashMap<String, Long>()
+    
+    // 缓存统计
+    private var cacheHits = 0L
+    private var cacheMisses = 0L
+    
+    // 动态缓存大小限制
+    private val maxMemoryCacheSize: Int
+        get() = config.maxCacheSize
+    private val cacheCleanupThreshold: Int
+        get() = (maxMemoryCacheSize * 0.8).toInt()
 
     init {
-        // 设置不同内容类型的默认 TTL（毫秒）
+        // 应用默认缓存模板
+        applyCacheTemplate(CacheTemplate.BALANCED)
+    }
+    
+    /**
+     * 应用缓存模板配置
+     */
+    fun applyCacheTemplate(template: CacheTemplate) {
+        config = CacheConfig(template = template)
+        
+        // 根据模板设置不同内容类型的TTL
+        val baseTtl = template.defaultTtlMinutes * 60 * 1000L
+        config.typeTtlMs.clear()
         config.typeTtlMs.putAll(
             mapOf(
-                ContentType.DRAMA to 30 * 60 * 1000L, // 短剧内容更易变化，30分钟
-                ContentType.MUSIC to 120 * 60 * 1000L, // 音乐更新较慢，2小时
-                ContentType.AUDIO to 180 * 60 * 1000L, // 有声书更新慢，3小时
-                ContentType.IMAGE to 180 * 60 * 1000L, // 漫画/图片更新慢，3小时
-                ContentType.TEXT to 60 * 60 * 1000L,  // 文本小说适中，1小时
-                ContentType.FILE to 120 * 60 * 1000L, // 文件类内容，2小时
-                ContentType.ALL to 45 * 60 * 1000L    // 汇总视图，45分钟
+                ContentType.DRAMA to (baseTtl * 0.5).toLong(),  // 短剧更新快，减半
+                ContentType.MUSIC to (baseTtl * 2.0).toLong(),  // 音乐更新慢，加倍
+                ContentType.AUDIO to (baseTtl * 2.5).toLong(),  // 有声书更新最慢
+                ContentType.IMAGE to (baseTtl * 2.0).toLong(),  // 漫画更新较慢
+                ContentType.TEXT to baseTtl,                    // 小说使用基准时间
+                ContentType.FILE to (baseTtl * 1.5).toLong(),   // 文件类适中
+                ContentType.ALL to (baseTtl * 0.8).toLong()     // 汇总视图稍短
             )
         )
+        
+        AppLog.put("应用缓存模板: ${template.displayName}, 基础TTL: ${template.defaultTtlMinutes}分钟")
     }
 
     /**
@@ -160,14 +198,22 @@ object ExploreCacheManager {
                     val currentTime = System.currentTimeMillis()
                     val ttl = getTtlMs(contentType, sourceUrls)
                     if (currentTime - cacheItem.timestamp < ttl) {
+                        // 更新访问统计
+                        updateAccessStats(cacheKey)
+                        cacheHits++
                         AppLog.put("发现页缓存命中: $cacheKey, 书籍数: ${cacheItem.books.size}")
                         return@withContext cacheItem.books
                     } else {
                         // 缓存过期，移除
                         memoryCache.remove(cacheKey)
+                        accessFrequency.remove(cacheKey)
+                        lastAccessTime.remove(cacheKey)
                         AppLog.put("发现页缓存过期: $cacheKey")
                     }
                 }
+                
+                // 记录缓存未命中
+                cacheMisses++
 
                 // 尝试磁盘缓存
                 if (config.enableDiskCache) {
@@ -285,10 +331,19 @@ object ExploreCacheManager {
     }
 
     /**
-     * 清理旧缓存 - 优化版本
+     * 更新访问统计
+     */
+    private fun updateAccessStats(cacheKey: String) {
+        val currentTime = System.currentTimeMillis()
+        accessFrequency[cacheKey] = accessFrequency.getOrDefault(cacheKey, 0) + 1
+        lastAccessTime[cacheKey] = currentTime
+    }
+    
+    /**
+     * 清理旧缓存 - LRU + 访问频率优化算法
      */
     private fun cleanupOldCache() {
-        if (memoryCache.size > CACHE_CLEANUP_THRESHOLD) {
+        if (memoryCache.size > cacheCleanupThreshold) {
             val currentTime = System.currentTimeMillis()
             val toRemove = mutableListOf<String>()
             
@@ -300,22 +355,45 @@ object ExploreCacheManager {
                 }
             }
             
-            // 如果还是太多，按时间戳移除最旧的
-            if (memoryCache.size - toRemove.size > MAX_MEMORY_CACHE_SIZE) {
+            // 如果还是太多，使用LRU + 访问频率算法
+            if (memoryCache.size - toRemove.size > maxMemoryCacheSize) {
                 val remaining = memoryCache.entries.filter { !toRemove.contains(it.key) }
-                val sortedByTime = remaining.sortedBy { it.value.timestamp }
-                val additionalRemove = sortedByTime.take(
-                    (memoryCache.size - toRemove.size) - MAX_MEMORY_CACHE_SIZE + 10
-                )
-                toRemove.addAll(additionalRemove.map { it.key })
+                
+                // 计算每个缓存项的优先级分数（访问频率 + 时间衰减）
+                val scoredItems = remaining.map { (key, item) ->
+                    val frequency = accessFrequency.getOrDefault(key, 0)
+                    val lastAccess = lastAccessTime.getOrDefault(key, item.timestamp)
+                    val timeSinceAccess = currentTime - lastAccess
+                    
+                    // 分数 = 访问频率 - 时间衰减（小时）
+                    val score = frequency - (timeSinceAccess / (60 * 60 * 1000)).toInt()
+                    Triple(key, item, score)
+                }.sortedBy { it.third } // 按分数升序，分数低的先删除
+                
+                val additionalRemoveCount = (memoryCache.size - toRemove.size) - maxMemoryCacheSize + 10
+                val additionalRemove = scoredItems.take(additionalRemoveCount)
+                toRemove.addAll(additionalRemove.map { it.first })
             }
             
-            toRemove.forEach { memoryCache.remove(it) }
+            // 执行清理
+            toRemove.forEach { key ->
+                memoryCache.remove(key)
+                accessFrequency.remove(key)
+                lastAccessTime.remove(key)
+            }
             
             if (toRemove.isNotEmpty()) {
-                AppLog.put("清理发现页缓存: ${toRemove.size} 项, 剩余: ${memoryCache.size}")
+                AppLog.put("清理发现页缓存: ${toRemove.size} 项, 剩余: ${memoryCache.size}, 命中率: ${getCacheHitRate()}%")
             }
         }
+    }
+    
+    /**
+     * 获取缓存命中率
+     */
+    private fun getCacheHitRate(): Int {
+        val total = cacheHits + cacheMisses
+        return if (total > 0) ((cacheHits * 100) / total).toInt() else 0
     }
 
     /**

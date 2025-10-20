@@ -56,6 +56,10 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
     private var isGridMode = true
     private val loadMoreView by lazy { LoadMoreView(requireContext()) }
 
+    // 骨架屏适配器
+    private var skeletonAdapter: io.stillpage.app.ui.widget.SkeletonAdapter? = null
+    private var isShowingSkeleton = false
+
     // 新增：RecyclerView 是否已完成一次初始化（避免重复添加监听 / footer）
     private var recyclerInitialized = false
 
@@ -82,7 +86,9 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
             LinearLayoutManager(context)
         }
 
-        rv.adapter = if (isGridMode) gridAdapter else listAdapter
+        // 初始显示骨架屏
+        showSkeletonScreen()
+        
         // 性能与观感优化
         rv.setHasFixedSize(true)
         rv.setItemViewCacheSize(16)
@@ -233,8 +239,16 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
             binding.refreshLayout.isRefreshing = isLoading
             if (isLoading) {
                 loadMoreView.startLoad()
+                // 首次加载时显示骨架屏
+                if (viewModel.booksData.value?.values?.all { it.isEmpty() } != false) {
+                    showSkeletonScreen()
+                }
             } else {
                 loadMoreView.stopLoad()
+                // 加载完成后隐藏骨架屏
+                if (viewModel.booksData.value?.values?.any { it.isNotEmpty() } == true) {
+                    hideSkeletonScreen()
+                }
             }
         }
 
@@ -338,6 +352,11 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
     private fun updateCurrentContent(contentMap: Map<ExploreNewViewModel.ContentType, List<ExploreNewViewModel.DiscoveryItem>>) {
         val currentType = viewModel.currentContentType.value ?: ExploreNewViewModel.ContentType.ALL
         val items = contentMap[currentType] ?: emptyList()
+
+        // 如果有数据，隐藏骨架屏
+        if (items.isNotEmpty()) {
+            hideSkeletonScreen()
+        }
 
         if (isGridMode) {
             gridAdapter.setItems(items)
@@ -591,6 +610,43 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
         if (currentData != null) {
             updateCurrentContent(currentData)
         }
+    }
+
+    /**
+     * 显示骨架屏
+     */
+    private fun showSkeletonScreen() {
+        if (isShowingSkeleton) return
+        
+        isShowingSkeleton = true
+        val skeletonType = if (isGridMode) {
+            io.stillpage.app.ui.widget.SkeletonView.SkeletonType.GRID_ITEM
+        } else {
+            io.stillpage.app.ui.widget.SkeletonView.SkeletonType.LIST_ITEM
+        }
+        
+        skeletonAdapter = io.stillpage.app.ui.widget.SkeletonAdapter(
+            requireContext(), 
+            skeletonType, 
+            if (isGridMode) 9 else 6 // 网格显示更多项
+        )
+        
+        binding.rvContent.adapter = skeletonAdapter
+        binding.tvEmptyMsg.visibility = View.GONE
+    }
+    
+    /**
+     * 隐藏骨架屏，显示实际内容
+     */
+    private fun hideSkeletonScreen() {
+        if (!isShowingSkeleton) return
+        
+        isShowingSkeleton = false
+        skeletonAdapter?.stopAllAnimations()
+        skeletonAdapter = null
+        
+        // 恢复正常适配器
+        binding.rvContent.adapter = if (isGridMode) gridAdapter else listAdapter
     }
 
     fun gotoTop() {

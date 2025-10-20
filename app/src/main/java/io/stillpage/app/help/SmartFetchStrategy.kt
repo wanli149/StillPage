@@ -41,6 +41,14 @@ object SmartFetchStrategy {
     
     // 设备性能枚举
     enum class DevicePerformance { HIGH, MEDIUM, LOW }
+    
+    // 网络质量枚举
+    enum class NetworkQuality { EXCELLENT, GOOD, FAIR, POOR }
+    
+    // 网络质量检测缓存
+    private var lastNetworkQualityCheck = 0L
+    private var cachedNetworkQuality = NetworkQuality.GOOD
+    private const val NETWORK_QUALITY_CACHE_MS = 30_000L // 30秒缓存
 
     // 退避/恢复状态
     private val failureCounts = mutableMapOf<String, Int>()
@@ -48,52 +56,58 @@ object SmartFetchStrategy {
 
     /**
      * 获取智能抓取配置 - 优化版本
+     * 降低并发数，增强稳定性和响应速度
      */
     fun getSmartFetchConfig(): FetchConfig {
         val networkType = getNetworkType()
         val devicePerformance = getDevicePerformance()
+        val networkQuality = getNetworkQuality()
         val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
         val isPeakTime = currentHour in 19..23 // 晚高峰时段
         
         return when {
-            networkType == NetworkType.WIFI && devicePerformance == DevicePerformance.HIGH && !isPeakTime -> {
+            networkType == NetworkType.WIFI && devicePerformance == DevicePerformance.HIGH && 
+            networkQuality == NetworkQuality.EXCELLENT && !isPeakTime -> {
                 FetchConfig(
-                    maxConcurrentSources = 4, // 降低并发数
-                    maxBooksPerSource = 25,   // 降低每源书籍数
-                    timeoutMs = 15000L,
+                    maxConcurrentSources = 3, // 从4降至3，提升稳定性
+                    maxBooksPerSource = 20,   // 从25降至20，减少单源压力
+                    timeoutMs = 12000L,       // 从15s降至12s，更快响应
                     retryCount = 2,
-                    minLoadIntervalMs = 1000L, // 增加间隔
-                    sourcesPerPage = 8        // 降低每页源数
+                    minLoadIntervalMs = 800L, // 从1s降至0.8s，提升响应
+                    sourcesPerPage = 6        // 从8降至6，平衡质量与数量
                 )
             }
-            networkType == NetworkType.WIFI && devicePerformance == DevicePerformance.MEDIUM -> {
+            networkType == NetworkType.WIFI && devicePerformance == DevicePerformance.MEDIUM && 
+            networkQuality >= NetworkQuality.GOOD -> {
                 FetchConfig(
-                    maxConcurrentSources = 3,
-                    maxBooksPerSource = 20,
-                    timeoutMs = 20000L,
+                    maxConcurrentSources = 2, // 从3降至2
+                    maxBooksPerSource = 15,   // 从20降至15
+                    timeoutMs = 15000L,       // 从20s降至15s
                     retryCount = 2,
-                    minLoadIntervalMs = 1200L,
-                    sourcesPerPage = 6
+                    minLoadIntervalMs = 1000L,
+                    sourcesPerPage = 5        // 从6降至5
                 )
             }
-            networkType == NetworkType.MOBILE && devicePerformance == DevicePerformance.HIGH -> {
+            networkType == NetworkType.MOBILE && devicePerformance == DevicePerformance.HIGH && 
+            networkQuality >= NetworkQuality.GOOD -> {
                 FetchConfig(
-                    maxConcurrentSources = 2,
-                    maxBooksPerSource = 15,
-                    timeoutMs = 25000L,
+                    maxConcurrentSources = 2, // 保持2
+                    maxBooksPerSource = 12,   // 从15降至12，节省流量
+                    timeoutMs = 20000L,       // 从25s降至20s
                     retryCount = 1,
-                    minLoadIntervalMs = 1500L,
-                    sourcesPerPage = 5
+                    minLoadIntervalMs = 1200L, // 从1.5s降至1.2s
+                    sourcesPerPage = 4        // 从5降至4
                 )
             }
             else -> {
+                // 低性能设备或网络较差时的保守配置
                 FetchConfig(
-                    maxConcurrentSources = 2,
-                    maxBooksPerSource = 12,
-                    timeoutMs = 30000L,
+                    maxConcurrentSources = 1, // 从2降至1，确保稳定
+                    maxBooksPerSource = 10,   // 从12降至10
+                    timeoutMs = 25000L,       // 从30s降至25s
                     retryCount = 1,
-                    minLoadIntervalMs = 2000L,
-                    sourcesPerPage = 3
+                    minLoadIntervalMs = 1500L, // 从2s降至1.5s
+                    sourcesPerPage = 3        // 保持3
                 )
             }
         }
@@ -295,6 +309,77 @@ object SmartFetchStrategy {
         } catch (e: Exception) {
             AppLog.put("获取设备性能失败", e)
             DevicePerformance.MEDIUM
+        }
+    }
+    
+    /**
+     * 获取网络质量等级
+     * 通过ping测试和连接速度评估网络质量
+     */
+    private fun getNetworkQuality(): NetworkQuality {
+        val currentTime = System.currentTimeMillis()
+        
+        // 使用缓存避免频繁检测
+        if (currentTime - lastNetworkQualityCheck < NETWORK_QUALITY_CACHE_MS) {
+            return cachedNetworkQuality
+        }
+        
+        return try {
+            val context = splitties.init.appCtx
+            val connectivityManager = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) 
+                as android.net.ConnectivityManager
+            val activeNetwork = connectivityManager.activeNetwork
+            val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+            
+            if (networkCapabilities == null) {
+                cachedNetworkQuality = NetworkQuality.POOR
+                lastNetworkQualityCheck = currentTime
+                return NetworkQuality.POOR
+            }
+            
+            // 基于网络类型和信号强度评估质量
+            val quality = when {
+                networkCapabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) -> {
+                    // WiFi网络质量评估
+                    val wifiManager = context.applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) 
+                        as android.net.wifi.WifiManager
+                    val wifiInfo = wifiManager.connectionInfo
+                    val rssi = wifiInfo.rssi
+                    
+                    when {
+                        rssi >= -50 -> NetworkQuality.EXCELLENT  // 信号强度很好
+                        rssi >= -60 -> NetworkQuality.GOOD       // 信号强度良好
+                        rssi >= -70 -> NetworkQuality.FAIR       // 信号强度一般
+                        else -> NetworkQuality.POOR              // 信号强度较差
+                    }
+                }
+                networkCapabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) -> {
+                    // 移动网络质量评估
+                    val telephonyManager = context.getSystemService(android.content.Context.TELEPHONY_SERVICE) 
+                        as android.telephony.TelephonyManager
+                    
+                    when (telephonyManager.networkType) {
+                        android.telephony.TelephonyManager.NETWORK_TYPE_LTE,
+                        android.telephony.TelephonyManager.NETWORK_TYPE_NR -> NetworkQuality.GOOD
+                        android.telephony.TelephonyManager.NETWORK_TYPE_HSDPA,
+                        android.telephony.TelephonyManager.NETWORK_TYPE_HSUPA,
+                        android.telephony.TelephonyManager.NETWORK_TYPE_HSPA -> NetworkQuality.FAIR
+                        else -> NetworkQuality.POOR
+                    }
+                }
+                else -> NetworkQuality.FAIR
+            }
+            
+            cachedNetworkQuality = quality
+            lastNetworkQualityCheck = currentTime
+            AppLog.put("网络质量检测: $quality")
+            quality
+            
+        } catch (e: Exception) {
+            AppLog.put("获取网络质量失败", e)
+            cachedNetworkQuality = NetworkQuality.FAIR
+            lastNetworkQualityCheck = currentTime
+            NetworkQuality.FAIR
         }
     }
     

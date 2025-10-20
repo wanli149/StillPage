@@ -143,4 +143,9 @@
     <color name="semi_transparent_black">#80000000</color>
     <color name="video_control_background">#CC000000</color>
     <color name="video_overlay_text">#FFFFFF</color>
+    
+    <!-- 骨架屏相关颜色 -->
+    <color name="shimmer_highlight">#33FFFFFF</color>
+    <color name="skeleton_background">#F0F0F0</color>
+    <color name="skeleton_background_dark">#2A2A2A</color>
 </resources>

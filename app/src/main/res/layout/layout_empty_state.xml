@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp">
+
+    <!-- 空状态图标 -->
+    <ImageView
+        android:id="@+id/iv_empty_icon"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginBottom="24dp"
+        android:alpha="0.4"
+        android:src="@drawable/ic_inbox"
+        android:tint="@color/textColorSecondary" />
+
+    <!-- 空状态标题 -->
+    <TextView
+        android:id="@+id/tv_empty_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="暂无内容"
+        android:textColor="@color/textColorPrimary"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <!-- 空状态描述 -->
+    <TextView
+        android:id="@+id/tv_empty_message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:gravity="center"
+        android:text="当前分类下没有找到相关内容\n试试其他分类或刷新页面"
+        android:textColor="@color/textColorSecondary"
+        android:textSize="14sp" />
+
+    <!-- 刷新按钮 -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_refresh"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="刷新"
+        app:icon="@drawable/ic_refresh" />
+
+</LinearLayout>
