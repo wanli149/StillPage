@@ -56,9 +56,8 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
     private var isGridMode = true
     private val loadMoreView by lazy { LoadMoreView(requireContext()) }
 
-    // 骨架屏适配器
-    private var skeletonAdapter: io.stillpage.app.ui.widget.SkeletonAdapter? = null
-    private var isShowingSkeleton = false
+    // 状态管理器
+    private lateinit var stateLayoutManager: io.stillpage.app.ui.widget.StateLayoutManager
 
     // 新增：RecyclerView 是否已完成一次初始化（避免重复添加监听 / footer）
     private var recyclerInitialized = false
@@ -86,8 +85,31 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
             LinearLayoutManager(context)
         }
 
-        // 初始显示骨架屏
-        showSkeletonScreen()
+        // 初始化状态管理器
+        stateLayoutManager = io.stillpage.app.ui.widget.StateLayoutManager(
+            requireContext(),
+            rv,
+            binding.tvEmptyMsg
+        )
+        
+        stateLayoutManager.setGridMode(isGridMode)
+        stateLayoutManager.setCallback(object : io.stillpage.app.ui.widget.StateLayoutManager.StateCallback {
+            override fun onRetryClicked() {
+                viewModel.refreshData()
+            }
+            
+            override fun onSettingsClicked() {
+                // 跳转到书源管理页面
+                startActivity<io.stillpage.app.ui.book.source.manage.BookSourceActivity>()
+            }
+            
+            override fun onRefreshClicked() {
+                viewModel.refreshData()
+            }
+        })
+        
+        // 初始显示加载状态
+        stateLayoutManager.showLoading()
         
         // 性能与观感优化
         rv.setHasFixedSize(true)
@@ -239,16 +261,12 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
             binding.refreshLayout.isRefreshing = isLoading
             if (isLoading) {
                 loadMoreView.startLoad()
-                // 首次加载时显示骨架屏
+                // 首次加载时显示加载状态
                 if (viewModel.booksData.value?.values?.all { it.isEmpty() } != false) {
-                    showSkeletonScreen()
+                    stateLayoutManager.showLoading()
                 }
             } else {
                 loadMoreView.stopLoad()
-                // 加载完成后隐藏骨架屏
-                if (viewModel.booksData.value?.values?.any { it.isNotEmpty() } == true) {
-                    hideSkeletonScreen()
-                }
             }
         }
 
@@ -264,6 +282,15 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
             if (msg.isNotEmpty()) {
                 // 可以在这里显示加载状态消息，比如Toast或者状态栏
                 AppLog.put("新发现页面：$msg")
+            }
+        }
+
+        // 监听错误状态
+        viewModel.errorState.observe(viewLifecycleOwner) { errorState ->
+            if (errorState != null) {
+                stateLayoutManager.showError(errorState.title, errorState.message)
+                // 清除错误状态，避免重复显示
+                viewModel.errorState.value = null
             }
         }
 
@@ -353,27 +380,40 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
         val currentType = viewModel.currentContentType.value ?: ExploreNewViewModel.ContentType.ALL
         val items = contentMap[currentType] ?: emptyList()
 
-        // 如果有数据，隐藏骨架屏
-        if (items.isNotEmpty()) {
-            hideSkeletonScreen()
-        }
-
+        // 更新适配器数据
         if (isGridMode) {
             gridAdapter.setItems(items)
         } else {
             listAdapter.setItems(items)
         }
+
+        // 根据数据状态更新UI
+        when {
+            items.isNotEmpty() -> {
+                val adapter = if (isGridMode) gridAdapter else listAdapter
+                stateLayoutManager.showContent(adapter)
+            }
+            viewModel.isLoading.value == true -> {
+                stateLayoutManager.showLoading()
+            }
+            else -> {
+                val message = when (currentType) {
+                    ExploreNewViewModel.ContentType.TEXT -> "暂无小说内容\n试试其他分类或刷新页面"
+                    ExploreNewViewModel.ContentType.AUDIO -> "暂无听书内容\n试试其他分类或刷新页面"
+                    ExploreNewViewModel.ContentType.IMAGE -> "暂无漫画内容\n试试其他分类或刷新页面"
+                    ExploreNewViewModel.ContentType.MUSIC -> "暂无音乐内容\n试试其他分类或刷新页面"
+                    ExploreNewViewModel.ContentType.DRAMA -> "暂无短剧内容\n试试其他分类或刷新页面"
+                    ExploreNewViewModel.ContentType.FILE -> "暂无文件内容\n试试其他分类或刷新页面"
+                    else -> "当前分类下没有找到相关内容\n试试其他分类或刷新页面"
+                }
+                stateLayoutManager.showEmpty(message)
+            }
+        }
     }
 
     private fun updateEmptyState(contentMap: Map<ExploreNewViewModel.ContentType, List<ExploreNewViewModel.DiscoveryItem>>) {
-        val currentType = viewModel.currentContentType.value ?: ExploreNewViewModel.ContentType.ALL
-        val items = contentMap[currentType] ?: emptyList()
-
-        binding.tvEmptyMsg.visibility = if (items.isEmpty() && viewModel.isLoading.value != true) {
-            View.VISIBLE
-        } else {
-            View.GONE
-        }
+        // 空状态现在由StateLayoutManager统一管理
+        // 这个方法保留以兼容现有逻辑，但实际处理已移至updateCurrentContent
     }
 
     private fun selectTab(contentType: ExploreNewViewModel.ContentType) {
@@ -584,20 +624,23 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
         return null
     }
 
-    // 切换视图模式（只切换 layoutManager 与 adapter，不重复初始化监听）
+    // 切换视图模式
     fun toggleViewMode() {
         isGridMode = !isGridMode
 
-        // 只替换 layoutManager 与 adapter，避免重复注册监听/添加 footer
+        // 更新布局管理器
         binding.rvContent.layoutManager = if (isGridMode) {
             GridLayoutManager(requireContext(), 3)
         } else {
             LinearLayoutManager(requireContext())
         }
 
-        binding.rvContent.adapter = if (isGridMode) gridAdapter else listAdapter
+        // 更新状态管理器的模式
+        stateLayoutManager.setGridMode(isGridMode)
+
         binding.rvContent.setHasFixedSize(true)
         binding.rvContent.setItemViewCacheSize(16)
+        
         if (!isGridMode) {
             // 列表模式下添加分隔线（若尚未添加）
             if (binding.rvContent.itemDecorationCount == 0) {
@@ -612,42 +655,7 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
         }
     }
 
-    /**
-     * 显示骨架屏
-     */
-    private fun showSkeletonScreen() {
-        if (isShowingSkeleton) return
-        
-        isShowingSkeleton = true
-        val skeletonType = if (isGridMode) {
-            io.stillpage.app.ui.widget.SkeletonView.SkeletonType.GRID_ITEM
-        } else {
-            io.stillpage.app.ui.widget.SkeletonView.SkeletonType.LIST_ITEM
-        }
-        
-        skeletonAdapter = io.stillpage.app.ui.widget.SkeletonAdapter(
-            requireContext(), 
-            skeletonType, 
-            if (isGridMode) 9 else 6 // 网格显示更多项
-        )
-        
-        binding.rvContent.adapter = skeletonAdapter
-        binding.tvEmptyMsg.visibility = View.GONE
-    }
-    
-    /**
-     * 隐藏骨架屏，显示实际内容
-     */
-    private fun hideSkeletonScreen() {
-        if (!isShowingSkeleton) return
-        
-        isShowingSkeleton = false
-        skeletonAdapter?.stopAllAnimations()
-        skeletonAdapter = null
-        
-        // 恢复正常适配器
-        binding.rvContent.adapter = if (isGridMode) gridAdapter else listAdapter
-    }
+
 
     fun gotoTop() {
         binding.rvContent.scrollToPosition(0)
@@ -656,5 +664,13 @@ class ExploreNewFragment() : VMBaseFragment<ExploreNewViewModel>(R.layout.fragme
     // MainFragmentInterface 实现
     fun onBackPressed(): Boolean {
         return false
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // 清理状态管理器资源
+        if (::stateLayoutManager.isInitialized) {
+            stateLayoutManager.cleanup()
+        }
     }
 }

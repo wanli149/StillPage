@@ -44,7 +44,7 @@ class SkeletonView @JvmOverloads constructor(
     
     init {
         // 获取主题颜色
-        backgroundColor = ContextCompat.getColor(context, R.color.background_card)
+        backgroundColor = ContextCompat.getColor(context, R.color.skeleton_background)
         shimmerColor = ContextCompat.getColor(context, R.color.shimmer_highlight)
         
         // 解析自定义属性
@@ -67,9 +67,8 @@ class SkeletonView @JvmOverloads constructor(
         shimmerPaint.style = Paint.Style.FILL
     }
     
-    override fun onDraw(canvas: Canvas?) {
+    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        canvas ?: return
         
         when (skeletonType) {
             SkeletonType.GRID_ITEM -> drawGridItemSkeleton(canvas)

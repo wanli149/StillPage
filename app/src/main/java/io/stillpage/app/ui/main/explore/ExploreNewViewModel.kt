@@ -48,18 +48,36 @@ class ExploreNewViewModel(application: Application) : BaseViewModel(application)
         val contentType: ContentType
     )
 
+    // 错误状态数据类
+    data class ErrorState(
+        val title: String,
+        val message: String,
+        val type: ErrorType
+    )
+
+    // 错误类型枚举
+    enum class ErrorType {
+        NETWORK_ERROR,      // 网络错误
+        NO_SOURCES,         // 没有书源
+        PARSE_ERROR,        // 解析错误
+        TIMEOUT_ERROR,      // 超时错误
+        UNKNOWN_ERROR       // 未知错误
+    }
+
     val booksData = MutableLiveData<Map<ContentType, List<DiscoveryItem>>>()
     val currentContentType = MutableLiveData<ContentType>(ContentType.ALL)
     val currentSortKey = MutableLiveData<SortKey>(SortKey.NAME_ASC)
     val isLoading = MutableLiveData<Boolean>(false)
     val loadingMsg = MutableLiveData<String>("")
     val hasMore = MutableLiveData<Boolean>(true)
+    val errorState = MutableLiveData<ErrorState?>(null)
 
     private var loadingCoroutine: Coroutine<Unit>? = null
     private var currentPage = 1
-    private var currentFetchConfig = SmartFetchStrategy.getSmartFetchConfig()
     private var lastLoadTimestamp: Long = 0L
     private val allItems = mutableListOf<DiscoveryItem>()
+    
+    private var currentFetchConfig = SmartFetchStrategy.getSmartFetchConfig()
     private val processedSources = mutableSetOf<String>() // 已处理的书源
 
     /**
@@ -73,6 +91,7 @@ class ExploreNewViewModel(application: Application) : BaseViewModel(application)
         allItems.clear()
         processedSources.clear()
         hasMore.postValue(true)
+        errorState.postValue(null)
 
         // 更新抓取配置
         currentFetchConfig = SmartFetchStrategy.getSmartFetchConfig()
@@ -98,10 +117,172 @@ class ExploreNewViewModel(application: Application) : BaseViewModel(application)
     }
 
     /**
+     * 从单个书源获取发现内容
+     */
+    private suspend fun exploreFromSource(source: BookSource, page: Int = 1): List<DiscoveryItem> {
+        val items = mutableListOf<DiscoveryItem>()
+
+        try {
+            val exploreKinds = source.exploreKinds()
+
+            // 根据页码选择不同的分类，实现更好的内容分布
+            val kindsToProcess = when {
+                exploreKinds.isEmpty() -> emptyList()
+                exploreKinds.size == 1 -> exploreKinds.take(1)
+                page == 1 -> exploreKinds.take(2) // 第一页加载前2个分类
+                else -> {
+                    // 后续页面轮换加载其他分类
+                    val startIndex = ((page - 1) * 2) % exploreKinds.size
+                    val endIndex = minOf(startIndex + 2, exploreKinds.size)
+                    if (startIndex < exploreKinds.size) {
+                        exploreKinds.subList(startIndex, endIndex)
+                    } else {
+                        exploreKinds.take(2) // 回到开头
+                    }
+                }
+            }
+
+            kindsToProcess.forEach { exploreKind ->
+                if (!exploreKind.url.isNullOrBlank()) {
+                    try {
+                        // 使用分页参数，每个分类获取更多书籍
+                        val books = WebBook.exploreBookAwait(source, exploreKind.url!!, page)
+                        books.take(currentFetchConfig.maxBooksPerSource / kindsToProcess.size).forEach { book ->
+                            // 检查是否为成人内容
+                            if (isInappropriateContent(book, source)) {
+                                AppLog.put("发现页面：过滤掉不适当内容 - ${book.name}")
+                                return@forEach
+                            }
+                            
+                            val contentType = detectContentType(book, source)
+                            items.add(DiscoveryItem(book, source, contentType))
+                        }
+                        AppLog.put("发现页面：${source.bookSourceName} - ${exploreKind.title} 获取到 ${books.size} 本书")
+                    } catch (e: Exception) {
+                        AppLog.put("发现页面抓取分类失败: ${source.bookSourceName} - ${exploreKind.title}", e)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            AppLog.put("发现页面处理书源失败: ${source.bookSourceName}", e)
+        }
+
+        return items
+    }
+
+    /**
+     * 检查是否为不适当内容
+     */
+    private fun isInappropriateContent(book: SearchBook, source: BookSource): Boolean {
+        return AdultContentFilter.shouldFilter(book, source)
+    }
+
+    /**
+     * 处理缓存的书籍数据
+     */
+    private suspend fun processCachedBooks(cachedBooks: List<SearchBook>) {
+        val items = mutableListOf<DiscoveryItem>()
+
+        // 为缓存的书籍创建DiscoveryItem，需要获取对应的书源信息
+        cachedBooks.forEach { book ->
+            try {
+                val source = appDb.bookSourceDao.getBookSource(book.origin)
+                if (source != null) {
+                    val contentType = detectContentType(book, source)
+                    items.add(DiscoveryItem(book, source, contentType))
+                }
+            } catch (e: Exception) {
+                AppLog.put("处理缓存书籍失败: ${book.name}", e)
+            }
+        }
+
+        allItems.addAll(items)
+        val uniqueItems = deduplicateItems(allItems)
+        val categorizedItems = categorizeItems(uniqueItems)
+
+        booksData.postValue(categorizedItems)
+        currentPage++
+        hasMore.postValue(true)
+
+        loadingMsg.postValue("已从缓存加载 ${items.size} 本内容")
+    }
+
+    /**
+     * 智能检测内容类型 - 优化版本
+     */
+    private fun detectContentType(book: SearchBook, bookSource: BookSource): ContentType {
+        return try {
+            // 使用优化的检测器
+            io.stillpage.app.help.ContentTypeDetectorOptimized.detectContentType(book, bookSource)
+        } catch (e: Exception) {
+            AppLog.put("内容类型检测失败，使用默认检测器", e)
+            // 降级到原检测器
+            val sourceType = io.stillpage.app.help.ContentTypeResolver.resolveFromSource(bookSource)
+            if (sourceType != ContentType.TEXT) sourceType
+            else ContentTypeDetector.detectContentType(book, bookSource)
+        }
+    }
+
+    /**
+     * 去重处理 - 使用优化的去重器
+     */
+    private fun deduplicateItems(items: List<DiscoveryItem>): List<DiscoveryItem> {
+        return try {
+            // 使用智能去重器
+            val (deduplicatedItems, stats) = io.stillpage.app.help.ContentDeduplicator.deduplicateWithStats(items)
+            
+            AppLog.put("智能去重统计: 原始${stats.originalCount}项 -> 去重后${stats.deduplicatedCount}项, " +
+                    "去除率${(stats.removalRate * 100).toInt()}%, 耗时${stats.processingTimeMs}ms")
+            
+            deduplicatedItems
+        } catch (e: Exception) {
+            AppLog.put("智能去重失败，使用简单去重", e)
+            // 降级到简单去重
+            simpleDeduplication(items)
+        }
+    }
+    
+    /**
+     * 简单去重（降级方案）
+     */
+    private fun simpleDeduplication(items: List<DiscoveryItem>): List<DiscoveryItem> {
+        fun normalizeBasic(s: String?): String {
+            return (s ?: "")
+                .lowercase()
+                .replace("\u00A0", " ") // 不间断空格
+                .replace("\u3000", " ") // 全角空格
+                .replace("[\\s]+".toRegex(), " ")
+                .trim()
+        }
+
+        fun canonicalKey(name: String?, author: String?): String {
+            val n = normalizeBasic(name)
+                .replace("[\\p{Punct}]".toRegex(), "") // 去除标点
+                .replace("(全集|完结|连载中|最新)".toRegex(), "") // 去除常见后缀
+                .trim()
+            val a = normalizeBasic(author)
+                .replace("[\\p{Punct}]".toRegex(), "")
+                .trim()
+            return if (a.isNotEmpty()) "$n-$a" else n
+        }
+
+        val seen = LinkedHashSet<String>()
+        val result = ArrayList<DiscoveryItem>(items.size)
+        for (item in items) {
+            val key = canonicalKey(item.book.name, item.book.author)
+            if (seen.add(key)) {
+                result.add(item)
+            }
+        }
+        return result
+    }
+
+    /**
      * 加载更多数据（分页加载）
      */
     fun loadMoreData() {
         if (isLoading.value == true) return
+        
         // 分页配额保护与触发节流
         val now = System.currentTimeMillis()
         if (now - lastLoadTimestamp < currentFetchConfig.minLoadIntervalMs) {
@@ -114,6 +295,7 @@ class ExploreNewViewModel(application: Application) : BaseViewModel(application)
         loadingCoroutine = execute {
             isLoading.postValue(true)
             loadingMsg.postValue(if (currentPage == 1) "正在加载发现内容..." else "正在加载更多内容...")
+            errorState.postValue(null) // 清除之前的错误状态
 
             try {
                 // 先尝试从缓存获取数据
@@ -135,13 +317,18 @@ class ExploreNewViewModel(application: Application) : BaseViewModel(application)
                 if (enabledSources.isEmpty()) {
                     loadingMsg.postValue("没有启用的书源")
                     hasMore.postValue(false)
+                    errorState.postValue(ErrorState(
+                        title = "没有可用书源",
+                        message = "请先添加并启用书源\n点击设置按钮进行配置",
+                        type = ErrorType.NO_SOURCES
+                    ))
                     if (currentPage == 1) {
                         booksData.postValue(emptyMap())
                     }
                     return@execute
                 }
 
-                // 使用智能抓取策略获取优化的书源，优先使用已标记类型的书源，并过滤18+内容
+                // 使用智能抓取策略获取优化的书源
                 val perTypeQuota = SmartFetchStrategy.getSourcesPerPageForType(
                     currentFetchConfig,
                     currentContentType.value ?: ContentType.ALL
@@ -232,6 +419,27 @@ class ExploreNewViewModel(application: Application) : BaseViewModel(application)
 
             } catch (e: Exception) {
                 AppLog.put("发现页面加载失败", e)
+                val errorType = when {
+                    e is java.net.UnknownHostException || 
+                    e is java.net.ConnectException -> ErrorType.NETWORK_ERROR
+                    e is java.net.SocketTimeoutException -> ErrorType.TIMEOUT_ERROR
+                    e.message?.contains("parse", true) == true -> ErrorType.PARSE_ERROR
+                    else -> ErrorType.UNKNOWN_ERROR
+                }
+                
+                val errorMessage = when (errorType) {
+                    ErrorType.NETWORK_ERROR -> "网络连接失败\n请检查网络设置后重试"
+                    ErrorType.TIMEOUT_ERROR -> "请求超时\n网络较慢，请稍后重试"
+                    ErrorType.PARSE_ERROR -> "数据解析失败\n书源可能存在问题"
+                    else -> "加载失败\n${e.localizedMessage ?: "未知错误"}"
+                }
+                
+                errorState.postValue(ErrorState(
+                    title = "加载失败",
+                    message = errorMessage,
+                    type = errorType
+                ))
+                
                 loadingMsg.postValue("加载失败: ${e.localizedMessage}")
             } finally {
                 isLoading.postValue(false)
@@ -239,96 +447,7 @@ class ExploreNewViewModel(application: Application) : BaseViewModel(application)
         }
     }
 
-    /**
-     * 从单个书源获取发现内容
-     */
-    private suspend fun exploreFromSource(source: BookSource, page: Int = 1): List<DiscoveryItem> {
-        val items = mutableListOf<DiscoveryItem>()
 
-        try {
-            val exploreKinds = source.exploreKinds()
-
-            // 根据页码选择不同的分类，实现更好的内容分布
-            val kindsToProcess = when {
-                exploreKinds.isEmpty() -> emptyList()
-                exploreKinds.size == 1 -> exploreKinds.take(1)
-                page == 1 -> exploreKinds.take(2) // 第一页加载前2个分类
-                else -> {
-                    // 后续页面轮换加载其他分类
-                    val startIndex = ((page - 1) * 2) % exploreKinds.size
-                    val endIndex = minOf(startIndex + 2, exploreKinds.size)
-                    if (startIndex < exploreKinds.size) {
-                        exploreKinds.subList(startIndex, endIndex)
-                    } else {
-                        exploreKinds.take(2) // 回到开头
-                    }
-                }
-            }
-
-            kindsToProcess.forEach { exploreKind ->
-                if (!exploreKind.url.isNullOrBlank()) {
-                    try {
-                        // 使用分页参数，每个分类获取更多书籍
-                        val books = WebBook.exploreBookAwait(source, exploreKind.url!!, page)
-                        books.take(currentFetchConfig.maxBooksPerSource / kindsToProcess.size).forEach { book ->
-                            // 检查是否为成人内容
-                            if (isInappropriateContent(book, source)) {
-                                AppLog.put("发现页面：过滤掉不适当内容 - ${book.name}")
-                                return@forEach
-                            }
-                            
-                            val contentType = detectContentType(book, source)
-                            items.add(DiscoveryItem(book, source, contentType))
-                        }
-                        AppLog.put("发现页面：${source.bookSourceName} - ${exploreKind.title} 获取到 ${books.size} 本书")
-                    } catch (e: Exception) {
-                        AppLog.put("发现页面抓取分类失败: ${source.bookSourceName} - ${exploreKind.title}", e)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            AppLog.put("发现页面处理书源失败: ${source.bookSourceName}", e)
-        }
-
-        return items
-    }
-
-    /**
-     * 检查是否为不适当内容
-     */
-    private fun isInappropriateContent(book: SearchBook, source: BookSource): Boolean {
-        return AdultContentFilter.shouldFilter(book, source)
-    }
-
-    /**
-     * 处理缓存的书籍数据
-     */
-    private suspend fun processCachedBooks(cachedBooks: List<SearchBook>) {
-        val items = mutableListOf<DiscoveryItem>()
-
-        // 为缓存的书籍创建DiscoveryItem，需要获取对应的书源信息
-        cachedBooks.forEach { book ->
-            try {
-                val source = appDb.bookSourceDao.getBookSource(book.origin)
-                if (source != null) {
-                    val contentType = ContentTypeDetector.detectContentType(book, source)
-                    items.add(DiscoveryItem(book, source, contentType))
-                }
-            } catch (e: Exception) {
-                AppLog.put("处理缓存书籍失败: ${book.name}", e)
-            }
-        }
-
-        allItems.addAll(items)
-        val uniqueItems = deduplicateItems(allItems)
-        val categorizedItems = categorizeItems(uniqueItems)
-
-        booksData.postValue(categorizedItems)
-        currentPage++
-        hasMore.postValue(true)
-
-        loadingMsg.postValue("已从缓存加载 ${items.size} 本内容")
-    }
 
     /**
      * 使用 latest 快照进行轻量预渲染（不影响分页状态）
@@ -350,56 +469,7 @@ class ExploreNewViewModel(application: Application) : BaseViewModel(application)
         loadingMsg.postValue("展示最近快照 ${items.size} 条，正在拉取最新内容...")
     }
 
-    /**
-     * 智能检测内容类型 - 优化版本
-     */
-    private fun detectContentType(book: SearchBook, bookSource: BookSource): ContentType {
-        return try {
-            // 优先使用优化的检测器
-            io.stillpage.app.help.ContentTypeDetectorOptimized.detectContentType(book, bookSource)
-        } catch (e: Exception) {
-            AppLog.put("内容类型检测失败，使用默认检测器", e)
-            // 降级到原检测器
-            val sourceType = io.stillpage.app.help.ContentTypeResolver.resolveFromSource(bookSource)
-            if (sourceType != ContentType.TEXT) sourceType
-            else ContentTypeDetector.detectContentType(book, bookSource)
-        }
-    }
 
-    /**
-     * 去重处理
-     */
-    private fun deduplicateItems(items: List<DiscoveryItem>): List<DiscoveryItem> {
-        fun normalizeBasic(s: String?): String {
-            return (s ?: "")
-                .lowercase()
-                .replace("\u00A0", " ") // 不间断空格
-                .replace("\u3000", " ") // 全角空格
-                .replace("[\\s]+".toRegex(), " ")
-                .trim()
-        }
-
-        fun canonicalKey(name: String?, author: String?): String {
-            val n = normalizeBasic(name)
-                .replace("[\\p{Punct}]".toRegex(), "") // 去除标点
-                .replace("(全集|完结|连载中|最新)".toRegex(), "") // 去除常见后缀
-                .trim()
-            val a = normalizeBasic(author)
-                .replace("[\\p{Punct}]".toRegex(), "")
-                .trim()
-            return if (a.isNotEmpty()) "$n-$a" else n
-        }
-
-        val seen = LinkedHashSet<String>()
-        val result = ArrayList<DiscoveryItem>(items.size)
-        for (item in items) {
-            val key = canonicalKey(item.book.name, item.book.author)
-            if (seen.add(key)) {
-                result.add(item)
-            }
-        }
-        return result
-    }
 
     /**
      * 分类处理

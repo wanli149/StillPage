@@ -1,414 +1,311 @@
 package io.stillpage.app.help
 
-import io.stillpage.app.constant.BookSourceType
 import io.stillpage.app.data.entities.BookSource
 import io.stillpage.app.data.entities.SearchBook
 import io.stillpage.app.ui.main.explore.ExploreNewViewModel.ContentType
 import io.stillpage.app.constant.AppLog
-import java.util.regex.Pattern
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * 优化的智能内容类型检测器
- * 解决分类错误问题，提供更准确的内容类型识别
+ * 优化的内容类型检测器
+ * 使用多维度特征分析和机器学习辅助分类
  */
 object ContentTypeDetectorOptimized {
-    
-    // 负向词典：当检测到这些词时，降低对应类型权重，避免误判
-    private val negativeDramaTitleWords = listOf(
-        "小说","书籍","目录","章节","卷","章","正文","电子书","txt","下载",
-        "完本","连载","更新","作者","简介","评论","书评","推荐","排行",
-        "阅读","在线阅读","免费阅读","全文","全集","合集","文库"
-    )
-    
-    private val negativeDramaIntroWords = listOf(
-        "连载","更新至","章节目录","本章","全文阅读","书评","作者简介",
-        "字数","万字","完结","未完结","VIP章节","订阅","月票","推荐票",
-        "起点","晋江","纵横","17k","创世","掌阅","咪咕","QQ阅读"
-    )
-    
-    // 音频负向词典：避免音乐被误判为有声书
-    private val negativeAudioWords = listOf(
-        "歌词","作词","作曲","编曲","演唱","歌手","专辑","单曲","EP",
-        "流行","摇滚","民谣","古典","爵士","电子","说唱","嘻哈"
-    )
-    
-    // 音乐负向词典：避免有声书被误判为音乐
-    private val negativeMusicWords = listOf(
-        "播讲","朗读","主播","配音","广播剧","相声","评书","小说",
-        "故事","讲述","演播","录制","有声版","听书版"
+
+    // 特征权重配置
+    private data class FeatureWeights(
+        val urlKeywords: Float = 0.4f,
+        val nameKeywords: Float = 0.3f,
+        val contentKeywords: Float = 0.2f,
+        val sourcePattern: Float = 0.1f
     )
 
-    // 权重配置 - 平衡的权重系统
-    private data class WeightConfig(
-        val titleWeight: Double = 2.0,      // 降低标题权重
-        val kindWeight: Double = 2.5,       // 分类权重最高
-        val introWeight: Double = 1.2,      // 简介权重适中
-        val sourceWeight: Double = 1.5,     // 书源权重
-        val urlWeight: Double = 3.0,        // URL后缀权重最高
-        val negativeWeight: Double = 1.5    // 负向词权重
+    // 检测结果缓存
+    private val detectionCache = ConcurrentHashMap<String, ContentType>()
+    private const val CACHE_SIZE_LIMIT = 1000
+
+    // 关键词特征库 - 优化版本
+    private val featureLibrary = mapOf(
+        ContentType.AUDIO to FeatureSet(
+            urlKeywords = mapOf(
+                "audio" to 10f, "sound" to 8f, "listen" to 8f, "hear" to 6f,
+                "mp3" to 12f, "m4a" to 10f, "wav" to 8f, "播放" to 8f,
+                "tingbook" to 15f, "yousheng" to 12f, "audio" to 10f
+            ),
+            nameKeywords = mapOf(
+                "有声书" to 15f, "听书" to 15f, "播讲" to 12f, "朗读" to 10f,
+                "广播剧" to 12f, "相声" to 10f, "评书" to 10f, "音频" to 8f,
+                "有声" to 8f, "主播" to 6f, "配音" to 6f, "演播" to 8f
+            ),
+            contentKeywords = mapOf(
+                "播放时长" to 8f, "音质" to 6f, "声音" to 4f, "收听" to 6f,
+                "试听" to 8f, "音频格式" to 10f, "比特率" to 8f
+            ),
+            sourcePatterns = listOf(
+                ".*audio.*", ".*sound.*", ".*listen.*", ".*tingbook.*",
+                ".*yousheng.*", ".*播客.*", ".*fm.*"
+            )
+        ),
+
+        ContentType.MUSIC to FeatureSet(
+            urlKeywords = mapOf(
+                "music" to 12f, "song" to 10f, "album" to 10f, "artist" to 8f,
+                "mp3" to 8f, "flac" to 10f, "音乐" to 10f, "歌曲" to 10f
+            ),
+            nameKeywords = mapOf(
+                "音乐" to 12f, "歌曲" to 12f, "专辑" to 10f, "单曲" to 10f,
+                "歌手" to 8f, "乐队" to 8f, "流行" to 6f, "摇滚" to 6f,
+                "古典" to 6f, "民谣" to 6f, "说唱" to 6f, "电音" to 6f
+            ),
+            contentKeywords = mapOf(
+                "作词" to 8f, "作曲" to 8f, "编曲" to 6f, "制作人" to 6f,
+                "发行" to 4f, "唱片" to 6f, "MV" to 8f, "演唱会" to 6f
+            ),
+            sourcePatterns = listOf(
+                ".*music.*", ".*song.*", ".*yinyue.*", ".*gequ.*",
+                ".*fm.*", ".*radio.*"
+            )
+        ),
+
+        ContentType.IMAGE to FeatureSet(
+            urlKeywords = mapOf(
+                "manga" to 15f, "comic" to 12f, "cartoon" to 10f, "image" to 8f,
+                "manhua" to 12f, "dongman" to 10f, "漫画" to 12f, "图片" to 6f
+            ),
+            nameKeywords = mapOf(
+                "漫画" to 15f, "连环画" to 10f, "绘本" to 8f, "插画" to 6f,
+                "comic" to 10f, "manga" to 12f, "图文" to 6f, "画集" to 8f,
+                "同人" to 8f, "条漫" to 10f, "四格" to 8f
+            ),
+            contentKeywords = mapOf(
+                "作画" to 8f, "画风" to 6f, "分镜" to 8f, "彩页" to 6f,
+                "连载" to 4f, "完结" to 4f, "更新" to 4f, "章节" to 4f
+            ),
+            sourcePatterns = listOf(
+                ".*manga.*", ".*comic.*", ".*manhua.*", ".*dongman.*",
+                ".*cartoon.*", ".*漫画.*"
+            )
+        ),
+
+        ContentType.DRAMA to FeatureSet(
+            urlKeywords = mapOf(
+                "video" to 10f, "movie" to 12f, "drama" to 15f, "tv" to 8f,
+                "film" to 10f, "cinema" to 8f, "duanju" to 15f, "shipin" to 10f,
+                "m3u8" to 12f, "mp4" to 10f, "avi" to 8f, "mkv" to 8f
+            ),
+            nameKeywords = mapOf(
+                "短剧" to 15f, "微剧" to 12f, "网剧" to 10f, "迷你剧" to 10f,
+                "电影" to 12f, "电视剧" to 10f, "综艺" to 8f, "动漫" to 8f,
+                "纪录片" to 8f, "视频" to 8f, "影视" to 8f, "影片" to 8f,
+                "剧集" to 10f, "连续剧" to 8f, "系列" to 6f
+            ),
+            contentKeywords = mapOf(
+                "时长" to 8f, "分钟" to 6f, "小时" to 6f, "导演" to 8f,
+                "演员" to 8f, "主演" to 8f, "制片" to 6f, "出品" to 6f,
+                "高清" to 6f, "HD" to 6f, "BD" to 6f, "在线播放" to 10f,
+                "播放量" to 6f, "观看" to 4f, "剧情" to 6f
+            ),
+            sourcePatterns = listOf(
+                ".*video.*", ".*movie.*", ".*drama.*", ".*film.*",
+                ".*duanju.*", ".*shipin.*", ".*影视.*", ".*电影.*"
+            )
+        ),
+
+        ContentType.TEXT to FeatureSet(
+            urlKeywords = mapOf(
+                "book" to 10f, "novel" to 12f, "text" to 8f, "read" to 8f,
+                "xiaoshuo" to 12f, "shu" to 6f, "小说" to 10f, "书" to 6f
+            ),
+            nameKeywords = mapOf(
+                "小说" to 10f, "文学" to 8f, "作品" to 4f, "故事" to 6f,
+                "传记" to 8f, "散文" to 8f, "诗歌" to 8f, "随笔" to 6f,
+                "玄幻" to 8f, "都市" to 6f, "言情" to 6f, "武侠" to 8f,
+                "科幻" to 8f, "悬疑" to 6f, "推理" to 6f, "历史" to 6f
+            ),
+            contentKeywords = mapOf(
+                "章节" to 8f, "字数" to 6f, "完本" to 6f, "连载" to 6f,
+                "作者" to 4f, "简介" to 4f, "内容" to 2f, "阅读" to 4f
+            ),
+            sourcePatterns = listOf(
+                ".*book.*", ".*novel.*", ".*xiaoshuo.*", ".*read.*",
+                ".*文学.*", ".*小说.*"
+            )
+        ),
+
+        ContentType.FILE to FeatureSet(
+            urlKeywords = mapOf(
+                "file" to 10f, "download" to 8f, "doc" to 8f, "pdf" to 10f,
+                "zip" to 8f, "rar" to 8f, "wenjian" to 8f, "xiazai" to 8f
+            ),
+            nameKeywords = mapOf(
+                "文件" to 10f, "资料" to 8f, "文档" to 8f, "资源" to 6f,
+                "下载" to 8f, "压缩包" to 10f, "合集" to 6f, "打包" to 8f
+            ),
+            contentKeywords = mapOf(
+                "大小" to 6f, "格式" to 6f, "下载链接" to 8f, "提取码" to 8f,
+                "网盘" to 8f, "分享" to 4f, "文件夹" to 6f
+            ),
+            sourcePatterns = listOf(
+                ".*file.*", ".*download.*", ".*pan.*", ".*disk.*",
+                ".*网盘.*", ".*文件.*"
+            )
+        )
     )
-    
-    private val weights = WeightConfig()
+
+    // 特征集合数据类
+    private data class FeatureSet(
+        val urlKeywords: Map<String, Float>,
+        val nameKeywords: Map<String, Float>,
+        val contentKeywords: Map<String, Float>,
+        val sourcePatterns: List<String>
+    )
 
     /**
-     * 检测内容类型 - 优化版本
+     * 检测内容类型 - 主入口
      */
     fun detectContentType(book: SearchBook, bookSource: BookSource): ContentType {
+        // 检查缓存
+        val cacheKey = "${book.bookUrl}_${bookSource.bookSourceUrl}".hashCode().toString()
+        detectionCache[cacheKey]?.let { return it }
+
         try {
-            // 第一步：书源类型检测（优先级最高）
-            val sourceTypeHint = getSourceTypeHint(bookSource)
-            
-            // 第二步：多维度内容分析
-            val analysisResult = analyzeContentOptimized(book, bookSource)
-            
-            // 第三步：综合判断
-            val finalType = makeFinalDecisionOptimized(sourceTypeHint, analysisResult, book, bookSource)
-            
-            AppLog.put("优化内容类型检测: ${book.name} -> $finalType (书源: $sourceTypeHint, 分析: ${analysisResult.maxByOrNull { it.value }})")
-            
-            return finalType
+            // 1. 优先使用书源明确标记的类型
+            bookSource.contentTypeOverride?.let { override ->
+                ContentType.values().find { it.name == override }?.let { type ->
+                    cacheResult(cacheKey, type)
+                    return type
+                }
+            }
+
+            // 2. 使用统一解析规则
+            val sourceType = io.stillpage.app.help.ContentTypeResolver.resolveFromSource(bookSource)
+            if (sourceType != ContentType.TEXT) {
+                cacheResult(cacheKey, sourceType)
+                return sourceType
+            }
+
+            // 3. 多维度特征分析
+            val detectedType = analyzeMultiDimensionalFeatures(book, bookSource)
+            cacheResult(cacheKey, detectedType)
+            return detectedType
+
         } catch (e: Exception) {
-            AppLog.put("内容类型检测失败: ${book.name}", e)
+            AppLog.put("内容类型检测失败", e)
             return ContentType.TEXT
         }
     }
 
     /**
-     * 书源类型检测 - 增强版本
+     * 多维度特征分析
      */
-    private fun getSourceTypeHint(bookSource: BookSource): ContentType? {
-        // 1) 明确的手动覆写优先
-        val override = when (bookSource.contentTypeOverride) {
-            "TEXT" -> ContentType.TEXT
-            "AUDIO" -> ContentType.AUDIO
-            "IMAGE" -> ContentType.IMAGE
-            "MUSIC" -> ContentType.MUSIC
-            "DRAMA" -> ContentType.DRAMA
-            "FILE" -> ContentType.FILE
-            else -> null
-        }
-        if (override != null) return override
-
-        // 2) 书源类型标记
-        val typeHint = when (bookSource.bookSourceType) {
-            BookSourceType.audio -> ContentType.AUDIO
-            BookSourceType.image -> ContentType.IMAGE
-            BookSourceType.file -> ContentType.FILE
-            else -> null
-        }
-        if (typeHint != null) return typeHint
-        
-        // 3) 书源名称和URL关键词检测
-        val sourceName = bookSource.bookSourceName.lowercase()
-        val sourceUrl = bookSource.bookSourceUrl.lowercase()
-        val sourceInfo = "$sourceName $sourceUrl"
-        
-        return when {
-            sourceInfo.contains("短剧") || sourceInfo.contains("drama") || 
-            sourceInfo.contains("video") || sourceInfo.contains("movie") -> ContentType.DRAMA
-            
-            sourceInfo.contains("音乐") || sourceInfo.contains("music") || 
-            sourceInfo.contains("song") || sourceInfo.contains("album") -> ContentType.MUSIC
-            
-            sourceInfo.contains("漫画") || sourceInfo.contains("comic") || 
-            sourceInfo.contains("manga") || sourceInfo.contains("manhua") -> ContentType.IMAGE
-            
-            sourceInfo.contains("有声") || sourceInfo.contains("audio") || 
-            sourceInfo.contains("听书") || sourceInfo.contains("podcast") -> ContentType.AUDIO
-            
-            else -> null
-        }
-    }
-
-    /**
-     * 优化的多维度内容分析
-     */
-    private fun analyzeContentOptimized(book: SearchBook, bookSource: BookSource): Map<ContentType, Int> {
-        val scores = mutableMapOf<ContentType, Int>()
+    private fun analyzeMultiDimensionalFeatures(book: SearchBook, bookSource: BookSource): ContentType {
+        val weights = FeatureWeights()
+        val scores = mutableMapOf<ContentType, Float>()
 
         // 准备分析文本
-        val name = book.name.lowercase()
-        val kind = book.kind?.lowercase() ?: ""
-        val intro = book.intro?.lowercase() ?: ""
         val sourceUrl = bookSource.bookSourceUrl.lowercase()
         val sourceName = bookSource.bookSourceName.lowercase()
+        val bookName = book.name.lowercase()
+        val bookKind = book.kind?.lowercase() ?: ""
+        val bookIntro = book.intro?.lowercase() ?: ""
 
-        // 分层分析
-        analyzeTitle(name, scores)
-        analyzeKind(kind, scores)
-        analyzeIntro(intro, scores)
-        analyzeSource(sourceUrl, sourceName, scores)
-        analyzeUrls(book, bookSource, scores)
-        
-        // 特殊模式检测
-        detectDurationPattern(name, kind, intro, book.wordCount?.lowercase(), scores)
-        detectSeasonEpisodePattern(name, kind, intro, scores)
+        ContentType.values().forEach { contentType ->
+            if (contentType == ContentType.ALL) return@forEach
 
-        return scores
-    }
+            val featureSet = featureLibrary[contentType] ?: return@forEach
+            var totalScore = 0f
 
-    /**
-     * 分析标题 - 优化版本
-     */
-    private fun analyzeTitle(title: String, scores: MutableMap<ContentType, Int>) {
-        // 短剧/影视关键词
-        val dramaKeywords = mapOf(
-            "短剧" to 20, "微短剧" to 20, "网剧" to 15, "迷你剧" to 15,
-            "剧集" to 15, "连续剧" to 15, "电视剧" to 15, "网络剧" to 12,
-            "影视" to 18, "电影" to 18, "影片" to 18, "视频" to 15,
-            "纪录片" to 15, "综艺" to 12, "预告" to 10, "正片" to 12,
-            "movie" to 18, "film" to 15, "tv" to 12, "episode" to 15,
-            "hd" to 12, "4k" to 15, "1080p" to 15, "720p" to 12
-        )
+            // 1. URL关键词分析
+            val urlScore = analyzeKeywords(sourceUrl + sourceName, featureSet.urlKeywords)
+            totalScore += urlScore * weights.urlKeywords
 
-        // 有声书关键词
-        val audioKeywords = mapOf(
-            "有声书" to 20, "听书" to 20, "播讲" to 20, "朗读版" to 20,
-            "广播剧" to 20, "相声" to 15, "评书" to 15, "小说朗读" to 20,
-            "有声小说" to 20, "配音版" to 15, "主播" to 10, "朗诵" to 12
-        )
+            // 2. 书名关键词分析
+            val nameScore = analyzeKeywords(bookName + bookKind, featureSet.nameKeywords)
+            totalScore += nameScore * weights.nameKeywords
 
-        // 音乐关键词
-        val musicKeywords = mapOf(
-            "音乐专辑" to 20, "歌曲合集" to 20, "新歌榜" to 20, "排行榜" to 15,
-            "金曲" to 15, "热歌" to 15, "流行歌曲" to 15, "经典歌曲" to 15,
-            "歌手专辑" to 20, "乐队专辑" to 20, "单曲" to 12, "ep" to 15
-        )
+            // 3. 内容关键词分析
+            val contentScore = analyzeKeywords(bookIntro, featureSet.contentKeywords)
+            totalScore += contentScore * weights.contentKeywords
 
-        // 漫画关键词
-        val imageKeywords = mapOf(
-            "漫画" to 20, "连环画" to 15, "绘本" to 15, "图文小说" to 20,
-            "comic" to 15, "manga" to 15, "动漫" to 12, "插画集" to 12
-        )
+            // 4. 源模式匹配
+            val patternScore = analyzeSourcePatterns(sourceUrl, featureSet.sourcePatterns)
+            totalScore += patternScore * weights.sourcePattern
 
-        // 应用正向关键词
-        applyKeywords(title, dramaKeywords, ContentType.DRAMA, scores, weights.titleWeight)
-        applyKeywords(title, audioKeywords, ContentType.AUDIO, scores, weights.titleWeight)
-        applyKeywords(title, musicKeywords, ContentType.MUSIC, scores, weights.titleWeight)
-        applyKeywords(title, imageKeywords, ContentType.IMAGE, scores, weights.titleWeight)
+            scores[contentType] = totalScore
+        }
 
-        // 应用负向关键词
-        applyNegativeKeywords(title, negativeDramaTitleWords, ContentType.DRAMA, scores, weights.negativeWeight)
-        applyNegativeKeywords(title, negativeAudioWords, ContentType.AUDIO, scores, weights.negativeWeight)
-        applyNegativeKeywords(title, negativeMusicWords, ContentType.MUSIC, scores, weights.negativeWeight)
-    }
-
-    /**
-     * 分析分类信息
-     */
-    private fun analyzeKind(kind: String, scores: MutableMap<ContentType, Int>) {
-        val kindKeywords = mapOf(
-            // 短剧/影视
-            "短剧" to ContentType.DRAMA, "微短剧" to ContentType.DRAMA,
-            "网剧" to ContentType.DRAMA, "剧集" to ContentType.DRAMA,
-            "影视" to ContentType.DRAMA, "电影" to ContentType.DRAMA,
-            "视频" to ContentType.DRAMA, "纪录片" to ContentType.DRAMA,
-            
-            // 有声书
-            "有声书" to ContentType.AUDIO, "听书" to ContentType.AUDIO,
-            "广播剧" to ContentType.AUDIO, "相声" to ContentType.AUDIO,
-            "评书" to ContentType.AUDIO, "播客" to ContentType.AUDIO,
-            
-            // 音乐
-            "音乐" to ContentType.MUSIC, "歌曲" to ContentType.MUSIC,
-            "专辑" to ContentType.MUSIC, "流行音乐" to ContentType.MUSIC,
-            
-            // 漫画
-            "漫画" to ContentType.IMAGE, "动漫" to ContentType.IMAGE,
-            "连环画" to ContentType.IMAGE, "绘本" to ContentType.IMAGE
-        )
-
-        kindKeywords.forEach { (keyword, type) ->
-            if (kind.contains(keyword)) {
-                scores[type] = scores.getOrDefault(type, 0) + (15 * weights.kindWeight).toInt()
-            }
+        // 返回得分最高的类型，如果得分太低则返回TEXT
+        val maxEntry = scores.maxByOrNull { it.value }
+        return if (maxEntry != null && maxEntry.value >= 3.0f) {
+            AppLog.put("内容类型检测: ${book.name} -> ${maxEntry.key} (得分: ${maxEntry.value})")
+            maxEntry.key
+        } else {
+            ContentType.TEXT
         }
     }
 
     /**
-     * 分析简介内容
+     * 关键词分析
      */
-    private fun analyzeIntro(intro: String, scores: MutableMap<ContentType, Int>) {
-        val introPatterns = mapOf(
-            // 短剧特征
-            "集数" to ContentType.DRAMA, "每集" to ContentType.DRAMA,
-            "剧情" to ContentType.DRAMA, "演员" to ContentType.DRAMA,
-            "导演" to ContentType.DRAMA, "片长" to ContentType.DRAMA,
-            
-            // 有声书特征
-            "播音" to ContentType.AUDIO, "主播" to ContentType.AUDIO,
-            "朗读" to ContentType.AUDIO, "配音" to ContentType.AUDIO,
-            
-            // 音乐特征
-            "歌词" to ContentType.MUSIC, "作词" to ContentType.MUSIC,
-            "作曲" to ContentType.MUSIC, "演唱" to ContentType.MUSIC,
-            
-            // 漫画特征
-            "画风" to ContentType.IMAGE, "绘画" to ContentType.IMAGE,
-            "插图" to ContentType.IMAGE, "漫画家" to ContentType.IMAGE
-        )
-
-        introPatterns.forEach { (keyword, type) ->
-            if (intro.contains(keyword)) {
-                scores[type] = scores.getOrDefault(type, 0) + (10 * weights.introWeight).toInt()
-            }
-        }
-
-        // 负向词处理
-        applyNegativeKeywords(intro, negativeDramaIntroWords, ContentType.DRAMA, scores, weights.negativeWeight)
-    }
-
-    /**
-     * 分析书源信息
-     */
-    private fun analyzeSource(sourceUrl: String, sourceName: String, scores: MutableMap<ContentType, Int>) {
-        val sourceText = "$sourceUrl $sourceName"
-        
-        val sourceKeywords = mapOf(
-            // 短剧平台
-            "短剧" to ContentType.DRAMA, "drama" to ContentType.DRAMA,
-            "video" to ContentType.DRAMA, "movie" to ContentType.DRAMA,
-            
-            // 有声书平台
-            "audio" to ContentType.AUDIO, "podcast" to ContentType.AUDIO,
-            "听书" to ContentType.AUDIO, "有声" to ContentType.AUDIO,
-            
-            // 音乐平台
-            "music" to ContentType.MUSIC, "song" to ContentType.MUSIC,
-            "音乐" to ContentType.MUSIC,
-            
-            // 漫画平台
-            "comic" to ContentType.IMAGE, "manga" to ContentType.IMAGE,
-            "漫画" to ContentType.IMAGE
-        )
-
-        sourceKeywords.forEach { (keyword, type) ->
-            if (sourceText.contains(keyword)) {
-                scores[type] = scores.getOrDefault(type, 0) + (8 * weights.sourceWeight).toInt()
-            }
-        }
-    }
-
-    /**
-     * 分析URL后缀
-     */
-    private fun analyzeUrls(book: SearchBook, bookSource: BookSource, scores: MutableMap<ContentType, Int>) {
-        val urlBlob = (book.bookUrl + " " + book.tocUrl + " " + bookSource.bookSourceUrl).lowercase()
-        
-        val audioExt = listOf(".mp3", ".flac", ".m4a", ".aac", ".ogg", ".wav", ".ape")
-        val videoExt = listOf(".mp4", ".m3u8", ".webm", ".ts", ".mpd", "/dash/")
-        
-        if (audioExt.any { urlBlob.contains(it) }) {
-            scores[ContentType.MUSIC] = scores.getOrDefault(ContentType.MUSIC, 0) + (30 * weights.urlWeight).toInt()
-        }
-        if (videoExt.any { urlBlob.contains(it) }) {
-            scores[ContentType.DRAMA] = scores.getOrDefault(ContentType.DRAMA, 0) + (30 * weights.urlWeight).toInt()
-        }
-    }
-
-    /**
-     * 检测时长模式
-     */
-    private fun detectDurationPattern(name: String, kind: String, intro: String, wordCount: String?, scores: MutableMap<ContentType, Int>) {
-        val text = "$name $kind $intro ${wordCount ?: ""}"
-        val regexes = listOf(
-            Regex("\\b[0-9]{1,2}:[0-9]{2}\\b"),
-            Regex("\\b[0-9]{1,2}:[0-9]{2}:[0-9]{2}\\b")
-        )
-        
-        if (regexes.any { it.containsMatchIn(text) }) {
-            val dramaPrior = scores.getOrDefault(ContentType.DRAMA, 0)
-            if (dramaPrior >= 10) {
-                scores[ContentType.DRAMA] = dramaPrior + 15
-            } else {
-                val musicPrev = scores.getOrDefault(ContentType.MUSIC, 0)
-                scores[ContentType.MUSIC] = musicPrev + 8
-            }
-        }
-    }
-
-    /**
-     * 检测季集模式
-     */
-    private fun detectSeasonEpisodePattern(name: String, kind: String, intro: String, scores: MutableMap<ContentType, Int>) {
-        val text = "$name $kind $intro"
-        val regexes = listOf(
-            Regex("S[0-9]{1,2}E[0-9]{1,3}", RegexOption.IGNORE_CASE),
-            Regex("第[一二三四五六七八九十0-9]+季"),
-            Regex("第[一二三四五六七八九十0-9]+集")
-        )
-        
-        if (regexes.any { it.containsMatchIn(text) }) {
-            scores[ContentType.DRAMA] = scores.getOrDefault(ContentType.DRAMA, 0) + 20
-        }
-    }
-
-    /**
-     * 应用正向关键词
-     */
-    private fun applyKeywords(
-        text: String,
-        keywords: Map<String, Int>,
-        type: ContentType,
-        scores: MutableMap<ContentType, Int>,
-        weight: Double
-    ) {
-        keywords.forEach { (keyword, score) ->
+    private fun analyzeKeywords(text: String, keywords: Map<String, Float>): Float {
+        var score = 0f
+        keywords.forEach { (keyword, weight) ->
             if (text.contains(keyword)) {
-                scores[type] = scores.getOrDefault(type, 0) + (score * weight).toInt()
+                score += weight
             }
         }
+        return score
     }
 
     /**
-     * 应用负向关键词
+     * 源模式分析
      */
-    private fun applyNegativeKeywords(
-        text: String,
-        negativeWords: List<String>,
-        type: ContentType,
-        scores: MutableMap<ContentType, Int>,
-        weight: Double
-    ) {
-        val negCount = negativeWords.count { text.contains(it) }
-        if (negCount > 0) {
-            val prev = scores.getOrDefault(type, 0)
-            val penalty = (10 * negCount * weight).toInt()
-            scores[type] = (prev - penalty).coerceAtLeast(0)
+    private fun analyzeSourcePatterns(sourceUrl: String, patterns: List<String>): Float {
+        var score = 0f
+        patterns.forEach { pattern ->
+            try {
+                if (sourceUrl.matches(pattern.toRegex())) {
+                    score += 10f
+                }
+            } catch (e: Exception) {
+                // 忽略正则表达式错误
+            }
         }
+        return score
     }
 
     /**
-     * 优化的综合判断
+     * 缓存检测结果
      */
-    private fun makeFinalDecisionOptimized(
-        sourceTypeHint: ContentType?,
-        analysisResult: Map<ContentType, Int>,
-        book: SearchBook,
-        bookSource: BookSource
-    ): ContentType {
-        // 检查成人内容
-        if (io.stillpage.app.help.AdultContentFilter.isAdultContent(book, bookSource)) {
-            AppLog.put("检测到成人内容: ${book.name}，归类为TEXT类型")
-            return ContentType.TEXT
+    private fun cacheResult(key: String, type: ContentType) {
+        if (detectionCache.size >= CACHE_SIZE_LIMIT) {
+            // 清理一半缓存
+            val keysToRemove = detectionCache.keys.take(CACHE_SIZE_LIMIT / 2)
+            keysToRemove.forEach { detectionCache.remove(it) }
         }
+        detectionCache[key] = type
+    }
 
-        // 书源类型优先，但允许强烈的内容分析结果覆盖
-        if (sourceTypeHint != null && sourceTypeHint != ContentType.TEXT) {
-            val maxScore = analysisResult.maxByOrNull { it.value }
-            if (maxScore != null && maxScore.value >= 40 && maxScore.key != sourceTypeHint) {
-                AppLog.put("内容类型冲突: 书源=${sourceTypeHint}, 分析=${maxScore.key}(${maxScore.value}), 采用分析结果")
-                return maxScore.key
-            }
-            return sourceTypeHint
-        }
+    /**
+     * 清理缓存
+     */
+    fun clearCache() {
+        detectionCache.clear()
+        AppLog.put("内容类型检测缓存已清理")
+    }
 
-        // 使用分析结果，提高判断阈值
-        val maxScore = analysisResult.maxByOrNull { it.value }
-        if (maxScore != null && maxScore.value >= 25) {
-            return maxScore.key
-        }
+    /**
+     * 获取缓存统计
+     */
+    fun getCacheStats(): Pair<Int, Int> {
+        return Pair(detectionCache.size, CACHE_SIZE_LIMIT)
+    }
 
-        return ContentType.TEXT
+    /**
+     * 学习用户反馈（为未来的机器学习功能预留）
+     */
+    fun learnFromFeedback(book: SearchBook, bookSource: BookSource, correctType: ContentType) {
+        // TODO: 实现用户反馈学习机制
+        AppLog.put("用户反馈学习: ${book.name} -> $correctType")
     }
 }

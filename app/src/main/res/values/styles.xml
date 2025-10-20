@@ -145,4 +145,16 @@
         <item name="android:layout_width">wrap_content</item>
     </style>
 
+    <!-- NumberPicker样式 -->
+    <style name="NumberPickerStyle">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/primaryText</item>
+        <item name="android:colorControlNormal">@color/accent</item>
+    </style>
+
+    <!-- 圆角背景样式 -->
+    <style name="RoundBackgroundStyle">
+        <item name="android:background">@drawable/shape_round_bg_stroke</item>
+    </style>
+
 </resources>
