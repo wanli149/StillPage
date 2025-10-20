@@ -157,8 +157,10 @@ class AudioPlayService : BaseService(),
                     exoPlayer.stop()
                     upPlayProgressJob?.cancel()
                     pause = false
-                    position = AudioPlay.book?.durChapterPos ?: 0
+                    // 确保使用AudioPlay模型中的最新位置
+                    position = AudioPlay.durChapterPos
                     url = AudioPlay.durPlayUrl
+                    AppLog.put("AudioPlayService: 播放章节 ${AudioPlay.durChapterIndex}，位置: ${position}ms")
                     play()
                 }
 
@@ -460,6 +462,11 @@ class AudioPlayService : BaseService(),
     private fun doDs() {
         postEvent(EventBus.AUDIO_DS, timeMinute)
         upAudioPlayNotification()
+        // 显示独立的定时器通知
+        if (timeMinute > 0) {
+            showTimerNotification(timeMinute)
+        }
+        
         dsJob?.cancel()
         dsJob = lifecycleScope.launch {
             while (isActive) {
@@ -471,12 +478,67 @@ class AudioPlayService : BaseService(),
                     if (timeMinute == 0) {
                         AudioPlay.stop()
                         postEvent(EventBus.AUDIO_DS, timeMinute)
+                        // 隐藏定时器通知
+                        hideTimerNotification()
                         break
                     }
                 }
                 postEvent(EventBus.AUDIO_DS, timeMinute)
                 upAudioPlayNotification()
+                // 更新定时器通知
+                if (timeMinute > 0) {
+                    showTimerNotification(timeMinute)
+                } else {
+                    hideTimerNotification()
+                }
             }
+        }
+    }
+    
+    /**
+     * 显示独立的定时器通知
+     */
+    private fun showTimerNotification(remainingMinutes: Int) {
+        try {
+            val hours = remainingMinutes / 60
+            val minutes = remainingMinutes % 60
+            val timeText = when {
+                hours > 0 -> "${hours}小时${minutes}分钟"
+                else -> "${minutes}分钟"
+            }
+            
+            val notification = NotificationCompat.Builder(this, AppConst.channelIdReadAloud)
+                .setSmallIcon(R.drawable.ic_timer_black_24dp)
+                .setContentTitle("音频定时关闭")
+                .setContentText("剩余 $timeText 后自动停止")
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .addAction(
+                    R.drawable.ic_close,
+                    "取消定时",
+                    servicePendingIntent<AudioPlayService>(IntentAction.setTimer)
+                )
+                .setContentIntent(
+                    activityPendingIntent<AudioPlayActivity>("timer")
+                )
+                .build()
+                
+            notificationManager.notify(NotificationId.AudioPlayService + 1, notification)
+        } catch (e: Exception) {
+            AppLog.put("创建定时器通知出错: ${e.localizedMessage}", e)
+        }
+    }
+    
+    /**
+     * 隐藏定时器通知
+     */
+    private fun hideTimerNotification() {
+        try {
+            notificationManager.cancel(NotificationId.AudioPlayService + 1)
+        } catch (e: Exception) {
+            AppLog.put("隐藏定时器通知出错: ${e.localizedMessage}", e)
         }
     }
 

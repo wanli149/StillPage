@@ -194,13 +194,17 @@ class AudioPlayActivity :
             }
             startActivity(Intent.createChooser(intent, getString(R.string.share)))
         }
-        binding.btnMore.setOnClickListener {
-            // TODO: 显示更多菜单
+        binding.btnMore.setOnClickListener { v ->
+            if (AppConfig.enableHaptics) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            showMoreMenu(v)
         }
 
         // 功能按钮
-        binding.btnTimer.setOnClickListener {
-            timerSliderPopup.showAsDropDown(it, 0, (-100).dpToPx(), Gravity.TOP)
+        binding.btnTimer.setOnClickListener { v ->
+            if (AppConfig.enableHaptics) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            animateButtonClick(v) {
+                TimerWheelPickerDialog.show(this)
+            }
         }
         // 首帧同步持久化的播放速度到 UI
         runCatching {
@@ -208,28 +212,47 @@ class AudioPlayActivity :
             binding.tvSpeed.text = String.format(Locale.ROOT, "%.1fX", currentSpeed)
             binding.tvSpeed.visible()
         }
-        binding.btnSpeed.setOnClickListener { v ->
+        
+        // 播放速度控制按钮
+        findViewById<View>(R.id.btn_speed_down).setOnClickListener { v ->
             if (AppConfig.enableHaptics) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            // 循环预设速度：0.75x、1.0x、1.25x、1.5x、2.0x
-            val speeds = floatArrayOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
-            // 找到当前速度的索引（取最接近值）
-            val idx = speeds.indexOfFirst { kotlin.math.abs(it - currentSpeed) < 0.051f }
-            val next = speeds[(if (idx >= 0) idx + 1 else 1) % speeds.size]
-            val adjust = next - currentSpeed
-            AudioPlay.adjustSpeed(adjust)
+            animateButtonClick(v) {
+                // 减速：每次减少0.25x，最小0.5x
+                val newSpeed = kotlin.math.max(0.5f, currentSpeed - 0.25f)
+                val adjust = newSpeed - currentSpeed
+                if (adjust != 0f) {
+                    AudioPlay.adjustSpeed(adjust)
+                }
+            }
+        }
+        
+        findViewById<View>(R.id.btn_speed_up).setOnClickListener { v ->
+            if (AppConfig.enableHaptics) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            animateButtonClick(v) {
+                // 加速：每次增加0.25x，最大3.0x
+                val newSpeed = kotlin.math.min(3.0f, currentSpeed + 0.25f)
+                val adjust = newSpeed - currentSpeed
+                if (adjust != 0f) {
+                    AudioPlay.adjustSpeed(adjust)
+                }
+            }
         }
         binding.btnMode.setOnClickListener { v ->
             if (AppConfig.enableHaptics) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            AudioPlay.changePlayMode()
+            animateButtonClick(v) {
+                AudioPlay.changePlayMode()
+            }
         }
         binding.btnChapterList.setOnClickListener { v ->
             if (AppConfig.enableHaptics) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            AudioPlay.book?.let {
-                AudioTocDialog.show(this, object : AudioTocDialog.Callback {
-                    override fun onChapterSelected(chapterIndex: Int, chapterPos: Int) {
-                        AudioPlay.skipTo(chapterIndex)
-                    }
-                })
+            animateButtonClick(v) {
+                AudioPlay.book?.let {
+                    AudioTocDialog.show(this, object : AudioTocDialog.Callback {
+                        override fun onChapterSelected(chapterIndex: Int, chapterPos: Int) {
+                            AudioPlay.skipTo(chapterIndex)
+                        }
+                    })
+                }
             }
         }
 
@@ -258,11 +281,17 @@ class AudioPlayActivity :
         }
         binding.ivFastForward.setOnClickListener { v ->
             if (AppConfig.enableHaptics) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            AudioPlay.adjustSpeed(0.1f)
+            animateButtonClick(v) {
+                // 快进15秒
+                AudioPlay.adjustProgress(AudioPlay.durChapterPos + 15000)
+            }
         }
         binding.ivFastRewind.setOnClickListener { v ->
             if (AppConfig.enableHaptics) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            AudioPlay.adjustSpeed(-0.1f)
+            animateButtonClick(v) {
+                // 快退15秒
+                AudioPlay.adjustProgress(kotlin.math.max(0, AudioPlay.durChapterPos - 15000))
+            }
         }
 
         // 进度条监听
@@ -289,19 +318,113 @@ class AudioPlayActivity :
     }
 
     private fun updatePlayModeIcon() {
-        binding.btnMode.setImageResource(playMode.iconRes)
+        // 添加播放模式切换动画
+        binding.btnMode.animate()
+            .rotationY(90f)
+            .setDuration(150)
+            .withEndAction {
+                binding.btnMode.setImageResource(playMode.iconRes)
+                binding.btnMode.rotationY = -90f
+                binding.btnMode.animate()
+                    .rotationY(0f)
+                    .setDuration(150)
+                    .start()
+            }
+            .start()
     }
 
     private fun upCover(path: String?) {
+        // 显示加载状态
+        showCoverLoading(true)
+        
         if (path.isNullOrBlank()) {
             io.stillpage.app.help.glide.ImageLoader.load(this, BookCover.defaultDrawable)
                 .into(binding.ivCover)
+            showCoverLoading(false)
+            // 为默认封面也添加淡入动画，保持一致性
+            binding.ivCover.alpha = 0f
+            binding.ivCover.animate()
+                .alpha(1f)
+                .setDuration(300)
+                .start()
             return
         }
-        BookCover.load(this, path, sourceOrigin = AudioPlay.bookSource?.bookSourceUrl)
-            .placeholder(R.drawable.image_cover_default)
-            .error(R.drawable.image_cover_default)
-            .into(binding.ivCover)
+        
+        BookCover.load(
+            context = this, 
+            path = path, 
+            sourceOrigin = AudioPlay.bookSource?.bookSourceUrl,
+            onLoadFinish = {
+                showCoverLoading(false)
+                // 添加封面加载完成的淡入动画
+                binding.ivCover.alpha = 0f
+                binding.ivCover.animate()
+                    .alpha(1f)
+                    .setDuration(300)
+                    .start()
+            }
+        ).into(binding.ivCover)
+    }
+    
+    /**
+     * 显示/隐藏封面加载状态
+     */
+    private fun showCoverLoading(show: Boolean) {
+        if (show) {
+            binding.progressCoverLoading.visibility = View.VISIBLE
+            binding.progressCoverLoading.animate()
+                .alpha(1f)
+                .setDuration(200)
+                .start()
+        } else {
+            binding.progressCoverLoading.animate()
+                .alpha(0f)
+                .setDuration(200)
+                .withEndAction {
+                    binding.progressCoverLoading.visibility = View.GONE
+                }
+                .start()
+        }
+    }
+    
+    /**
+     * 通用按钮点击动画
+     */
+    private fun animateButtonClick(view: View, action: () -> Unit) {
+        view.animate()
+            .scaleX(0.9f)
+            .scaleY(0.9f)
+            .setDuration(100)
+            .withEndAction {
+                action.invoke()
+                view.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(100)
+                    .start()
+            }
+            .start()
+    }
+    
+    /**
+     * 显示更多菜单 - 复用现有的选项菜单
+     */
+    private fun showMoreMenu(anchor: View) {
+        val popup = androidx.appcompat.widget.PopupMenu(this, anchor)
+        popup.menuInflater.inflate(R.menu.audio_play, popup.menu)
+        
+        // 动态设置菜单项的可见性和状态，复用现有逻辑
+        val menu = popup.menu
+        menu.findItem(R.id.menu_login)?.isVisible = !AudioPlay.bookSource?.loginUrl.isNullOrBlank()
+        menu.findItem(R.id.menu_wake_lock)?.isChecked = AppConfig.audioPlayUseWakeLock
+        
+        // 设置菜单项点击监听器，复用现有的处理逻辑
+        popup.setOnMenuItemClickListener { item ->
+            onCompatOptionsItemSelected(item)
+        }
+        
+        // 显示菜单
+        popup.show()
     }
 
     private fun playButton() {
@@ -313,22 +436,45 @@ class AudioPlayActivity :
     }
 
     private fun updatePlayState(status: Int) {
-        when (status) {
-            Status.PLAY -> {
-                // 正在播放，显示暂停图标
-                binding.fabPlayStop.setImageResource(R.drawable.ic_pause)
-                binding.progressLoading.visibility = View.GONE
+        val targetIcon = when (status) {
+            Status.PLAY -> R.drawable.ic_pause
+            Status.PAUSE -> R.drawable.ic_play_24dp
+            else -> R.drawable.ic_play_24dp
+        }
+        
+        // 添加平滑的状态切换动画
+        animatePlayButtonState(targetIcon, status != Status.STOP)
+    }
+    
+    /**
+     * 播放按钮状态切换动画
+     */
+    private fun animatePlayButtonState(targetIcon: Int, hideLoading: Boolean = true) {
+        // 缩放动画 + 图标切换
+        binding.fabPlayStop.animate()
+            .scaleX(0.85f)
+            .scaleY(0.85f)
+            .setDuration(120)
+            .withEndAction {
+                binding.fabPlayStop.setImageResource(targetIcon)
+                binding.fabPlayStop.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(120)
+                    .start()
             }
-            Status.PAUSE -> {
-                // 暂停状态，显示播放图标
-                binding.fabPlayStop.setImageResource(R.drawable.ic_play_24dp)
-                binding.progressLoading.visibility = View.GONE
-            }
-            else -> {
-                // 停止或其他状态，显示播放图标
-                binding.fabPlayStop.setImageResource(R.drawable.ic_play_24dp)
-                binding.progressLoading.visibility = View.GONE
-            }
+            .start()
+            
+        // 隐藏加载指示器
+        if (hideLoading) {
+            binding.progressLoading.animate()
+                .alpha(0f)
+                .setDuration(200)
+                .withEndAction {
+                    binding.progressLoading.visibility = View.GONE
+                    binding.progressLoading.alpha = 1f
+                }
+                .start()
         }
     }
 
@@ -382,6 +528,13 @@ class AudioPlayActivity :
         AppLog.put("AudioPlayActivity: Activity销毁，保存进度")
         AudioPlay.saveRead()
         
+        // 清理所有正在进行的动画，避免内存泄漏
+        binding.fabPlayStop.clearAnimation()
+        binding.btnMode.clearAnimation()
+        binding.ivCover.clearAnimation()
+        binding.progressLoading.clearAnimation()
+        binding.progressCoverLoading.clearAnimation()
+        
         if (AudioPlay.status != Status.PLAY) {
             AudioPlay.stop()
         }
@@ -430,7 +583,22 @@ class AudioPlayActivity :
 
     override fun upLoading(loading: Boolean) {
         runOnUiThread {
-            binding.progressLoading.visible(loading)
+            if (loading) {
+                binding.progressLoading.visibility = View.VISIBLE
+                binding.progressLoading.animate()
+                    .alpha(1f)
+                    .setDuration(200)
+                    .start()
+            } else {
+                binding.progressLoading.animate()
+                    .alpha(0f)
+                    .setDuration(200)
+                    .withEndAction {
+                        binding.progressLoading.visibility = View.GONE
+                        binding.progressLoading.alpha = 1f
+                    }
+                    .start()
+            }
         }
     }
 

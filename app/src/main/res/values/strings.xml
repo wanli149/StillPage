@@ -967,6 +967,7 @@
     <string name="sub_dir">Sub dir</string>
     <string name="general">General</string>
     <string name="use_replace">Use replace</string>
+    
     <string name="scope_title">Act on the title</string>
     <string name="scope_content">Act on the content</string>
     <string name="join_qq_channel">Join QQ channel</string>
@@ -1267,6 +1268,20 @@
     <string name="sort_content_type">By content type</string>
     <!-- Video -->
     <string name="video_play">视频播放</string>
+    
+    <!-- Audio Play Accessibility Descriptions -->
+    <string name="audio_book_cover">Audio book cover image</string>
+    <string name="set_timer_description">Set sleep timer for audio playback</string>
+    <string name="play_speed_description">Adjust playback speed</string>
+    <string name="play_mode_description">Change playback mode (repeat, shuffle, etc.)</string>
+    <string name="chapter_list_description">Open chapter list</string>
+    <string name="play_pause_description">Play or pause audio</string>
+    <string name="skip_previous_description">Skip to previous chapter</string>
+    <string name="skip_next_description">Skip to next chapter</string>
+    <string name="fast_rewind_description">Rewind 15 seconds</string>
+    <string name="fast_forward_description">Fast forward 15 seconds</string>
+    <string name="speed_up_description">Increase playback speed</string>
+    <string name="speed_down_description">Decrease playback speed</string>
     
     <!-- Group Management -->
 </resources>

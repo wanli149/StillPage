@@ -73,6 +73,8 @@ object AudioPlay : CoroutineScope by MainScope() {
     private const val MAX_RETRY_COUNT = 3
     // 进度保存节流窗口改为配置项：从 AppConfig 读取
     private var lastSaveAt: Long = 0
+    // 标记是否是章节切换操作
+    private var isChapterSwitching = false
 
     fun changePlayMode() {
         playMode = playMode.next()
@@ -89,7 +91,13 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
         if (durChapterIndex != book.durChapterIndex) {
             durChapterIndex = book.durChapterIndex
-            durChapterPos = book.durChapterPos
+            // 只有在非章节切换状态下才恢复播放位置，否则保持为0
+            if (!isChapterSwitching) {
+                durChapterPos = book.durChapterPos
+                AppLog.put("AudioPlay: 恢复章节播放位置: ${book.durChapterPos}")
+            } else {
+                AppLog.put("AudioPlay: 章节切换中，保持位置为0")
+            }
             durPlayUrl = ""
             durAudioSize = 0
         }
@@ -250,9 +258,16 @@ object AudioPlay : CoroutineScope by MainScope() {
 
 
     private fun upPlayUrl() {
-        if (isPlayToEnd()) {
+        // 如果是章节切换操作，总是从头播放
+        if (isChapterSwitching) {
+            AppLog.put("AudioPlay: 章节切换，使用playNew从头播放")
+            isChapterSwitching = false // 重置标志
+            playNew()
+        } else if (durChapterPos == 0 || isPlayToEnd()) {
+            AppLog.put("AudioPlay: 使用playNew从头播放，位置: $durChapterPos")
             playNew()
         } else {
+            AppLog.put("AudioPlay: 使用play继续播放，位置: $durChapterPos")
             play()
         }
     }
@@ -341,9 +356,12 @@ object AudioPlay : CoroutineScope by MainScope() {
         Coroutine.async {
             AppLog.put("AudioPlay: 跳转到章节 $index，当前状态: $status")
             stopPlay()
+            isChapterSwitching = true
             durChapterIndex = index
             durChapterPos = 0
             durPlayUrl = ""
+            // 立即更新章节信息，确保UI显示正确
+            upDurChapter()
             saveRead()
             // loadPlayUrl会通过upPlayUrl自动开始播放
             loadPlayUrl()
@@ -352,12 +370,17 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun prev() {
+        AppLog.put("AudioPlay: prev() 调用，当前章节: $durChapterIndex，当前位置: $durChapterPos")
         Coroutine.async {
             stopPlay()
             if (durChapterIndex > 0) {
+                isChapterSwitching = true
                 durChapterIndex -= 1
                 durChapterPos = 0
                 durPlayUrl = ""
+                AppLog.put("AudioPlay: 切换到上一章节 $durChapterIndex，位置重置为 0")
+                // 立即更新章节信息，确保UI显示正确
+                upDurChapter()
                 saveRead()
                 loadPlayUrl()
             }
@@ -365,34 +388,51 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun next() {
+        AppLog.put("AudioPlay: next() 调用，当前章节: $durChapterIndex，当前位置: $durChapterPos")
         stopPlay()
         when (playMode) {
             PlayMode.LIST_END_STOP -> {
                 if (durChapterIndex + 1 < simulatedChapterSize) {
+                    isChapterSwitching = true
                     durChapterIndex += 1
                     durChapterPos = 0
                     durPlayUrl = ""
+                    AppLog.put("AudioPlay: 切换到下一章节 $durChapterIndex，位置重置为 0")
+                    // 立即更新章节信息，确保UI显示正确
+                    upDurChapter()
                     saveRead()
                     loadPlayUrl()
                 }
             }
             PlayMode.SINGLE_LOOP -> {
+                isChapterSwitching = true
                 durChapterPos = 0
                 durPlayUrl = ""
+                AppLog.put("AudioPlay: 单曲循环，位置重置为 0")
+                // 立即更新章节信息，确保UI显示正确
+                upDurChapter()
                 saveRead()
                 loadPlayUrl()
             }
             PlayMode.RANDOM -> {
+                isChapterSwitching = true
                 durChapterIndex = (0 until simulatedChapterSize).random()
                 durChapterPos = 0
                 durPlayUrl = ""
+                AppLog.put("AudioPlay: 随机播放，切换到章节 $durChapterIndex，位置重置为 0")
+                // 立即更新章节信息，确保UI显示正确
+                upDurChapter()
                 saveRead()
                 loadPlayUrl()
             }
             PlayMode.LIST_LOOP -> {
+                isChapterSwitching = true
                 durChapterIndex = (durChapterIndex + 1) % simulatedChapterSize
                 durChapterPos = 0
                 durPlayUrl = ""
+                AppLog.put("AudioPlay: 列表循环，切换到章节 $durChapterIndex，位置重置为 0")
+                // 立即更新章节信息，确保UI显示正确
+                upDurChapter()
                 saveRead()
                 loadPlayUrl()
             }

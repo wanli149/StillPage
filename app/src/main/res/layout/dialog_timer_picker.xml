@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- 预设时间按钮 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="快速选择"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/primaryText"
+        android:layout_marginBottom="12dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="24dp">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_preset_15"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="15分钟"
+            android:textSize="12sp"
+            android:background="@drawable/selector_stroke_round_bg"
+            android:textColor="@color/primaryText" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_preset_30"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="4dp"
+            android:text="30分钟"
+            android:textSize="12sp"
+            android:background="@drawable/selector_stroke_round_bg"
+            android:textColor="@color/primaryText" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_preset_60"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="4dp"
+            android:text="1小时"
+            android:textSize="12sp"
+            android:background="@drawable/selector_stroke_round_bg"
+            android:textColor="@color/primaryText" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_preset_120"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="2小时"
+            android:textSize="12sp"
+            android:background="@drawable/selector_stroke_round_bg"
+            android:textColor="@color/primaryText" />
+
+    </LinearLayout>
+
+    <!-- 自定义时间选择 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="自定义时间"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/primaryText"
+        android:layout_marginBottom="12dp" />
+
+    <!-- 时间显示 -->
+    <TextView
+        android:id="@+id/tv_selected_time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="30分钟"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/accent"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 时间滑动条 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="8dp">
+
+        <!-- 滑动条标签 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="5分钟"
+                android:textSize="12sp"
+                android:textColor="@color/secondaryText"
+                android:gravity="start" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="3小时"
+                android:textSize="12sp"
+                android:textColor="@color/secondaryText"
+                android:gravity="end" />
+
+        </LinearLayout>
+
+        <!-- 滑动条 -->
+        <SeekBar
+            android:id="@+id/seekbar_timer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="21"
+            android:progress="5"
+            android:progressTint="@color/accent"
+            android:thumbTint="@color/accent" />
+
+        <!-- 刻度说明 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="拖动滑块调整时间"
+            android:textSize="11sp"
+            android:textColor="@color/secondaryText"
+            android:gravity="center"
+            android:layout_marginTop="4dp" />
+
+    </LinearLayout>
+
+    <!-- 提示文字 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="设置后将在指定时间自动停止播放"
+        android:textSize="12sp"
+        android:textColor="@color/secondaryText"
+        android:gravity="center"
+        android:layout_marginTop="16dp" />
+
+</LinearLayout>
