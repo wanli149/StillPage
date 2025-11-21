@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_sort"
+        android:icon="@drawable/ic_sort"
+        android:title="排序"
+        app:showAsAction="always">
+        <menu>
+            <item
+                android:id="@+id/menu_sort_name_asc"
+                android:title="名称升序" />
+            <item
+                android:id="@+id/menu_sort_name_desc"
+                android:title="名称降序" />
+            <item
+                android:id="@+id/menu_sort_source_weight"
+                android:title="来源权重" />
+            <item
+                android:id="@+id/menu_sort_content_type"
+                android:title="内容类型" />
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/menu_refresh"
+        android:icon="@drawable/ic_refresh_black_24dp"
+        android:title="刷新"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menu_clear_cache"
+        android:title="清理缓存"
+        app:showAsAction="never" />
+
+</menu>

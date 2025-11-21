@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    
+    <!-- 立体的气泡前景 - 透明背景 -->
+    <group android:translateX="100" android:translateY="100">
+        
+        <!-- 气泡1 - 大的蓝色气泡 -->
+        <group android:translateX="-54" android:translateY="-17.5">
+            <!-- 阴影 -->
+            <circle android:fillColor="#000000" android:fillAlpha="0.12"
+                cx="4" cy="4" r="52.5" />
+            <!-- 主体 -->
+            <circle android:fillColor="#ADD8E6" android:fillAlpha="0.45"
+                cx="0" cy="0" r="52.5" />
+            <!-- 高光 -->
+            <circle android:fillColor="#FFFFFF" android:fillAlpha="0.3"
+                cx="-15" cy="-15" r="20" />
+        </group>
+        
+        <!-- 气泡2 - 中等的橙色气泡 -->
+        <group android:translateX="40" android:translateY="0">
+            <!-- 阴影 -->
+            <circle android:fillColor="#000000" android:fillAlpha="0.12"
+                cx="4" cy="4" r="40" />
+            <!-- 主体 -->
+            <circle android:fillColor="#FFE4B5" android:fillAlpha="0.55"
+                cx="0" cy="0" r="40" />
+            <!-- 高光 -->
+            <circle android:fillColor="#FFFFFF" android:fillAlpha="0.3"
+                cx="-12" cy="-12" r="15" />
+        </group>
+        
+        <!-- 气泡3 - 小的粉色气泡 -->
+        <group android:translateX="-32" android:translateY="42.5">
+            <!-- 阴影 -->
+            <circle android:fillColor="#000000" android:fillAlpha="0.12"
+                cx="4" cy="4" r="32.5" />
+            <!-- 主体 -->
+            <circle android:fillColor="#FFB6C1" android:fillAlpha="0.45"
+                cx="0" cy="0" r="32.5" />
+            <!-- 高光 -->
+            <circle android:fillColor="#FFFFFF" android:fillAlpha="0.3"
+                cx="-10" cy="-10" r="12" />
+        </group>
+        
+    </group>
+</vector>

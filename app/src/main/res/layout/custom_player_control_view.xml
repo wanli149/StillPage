@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom"
+    android:background="@drawable/bg_video_control_gradient"
+    android:orientation="vertical"
+    android:paddingStart="16dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="16dp">
+
+    <!-- 进度条 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- 当前时间 -->
+        <TextView
+            android:id="@+id/exo_position"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="00:00"
+            android:textColor="@color/video_overlay_text"
+            android:textSize="12sp" />
+
+        <!-- 进度条 -->
+        <androidx.media3.ui.DefaultTimeBar
+            android:id="@+id/exo_progress"
+            android:layout_width="0dp"
+            android:layout_height="26dp"
+            android:layout_weight="1" />
+
+        <!-- 总时长 -->
+        <TextView
+            android:id="@+id/exo_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="00:00"
+            android:textColor="@color/video_overlay_text"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+    <!-- 控制按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- 快退按钮 -->
+        <ImageButton
+            android:id="@+id/btn_rewind"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="快退10秒"
+            android:src="@drawable/ic_fast_rewind"
+            android:tint="@color/video_overlay_text" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- 播放/暂停按钮 -->
+        <ImageButton
+            android:id="@+id/exo_play_pause"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="播放/暂停"
+            android:src="@drawable/ic_play_arrow"
+            android:tint="@color/video_overlay_text" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- 快进按钮 -->
+        <ImageButton
+            android:id="@+id/btn_forward"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="快进10秒"
+            android:src="@drawable/ic_fast_forward"
+            android:tint="@color/video_overlay_text" />
+
+    </LinearLayout>
+
+</LinearLayout>

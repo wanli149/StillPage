@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="?android:attr/selectableItemBackground"
+    android:padding="12dp"
+    android:gravity="center_vertical">
+
+    <!-- 分组标题 -->
+    <TextView
+        android:id="@+id/tv_group_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="第一卷"
+        android:textColor="@color/md_grey_800"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <!-- 展开/收起指示器 -->
+    <ImageView
+        android:id="@+id/view_indicator"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_arrow_right"
+        android:contentDescription="展开/收起"
+        android:rotation="90" />
+
+</LinearLayout>

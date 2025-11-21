@@ -1,0 +1,71 @@
+<resources>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="activity_vertical_margin">16dp</dimen>
+    <dimen name="nav_header_vertical_spacing">8dp</dimen>
+    <dimen name="nav_header_height">176dp</dimen>
+    <dimen name="fab_margin">16dp</dimen>
+
+    <dimen name="font_size_normal">14sp</dimen>
+    <dimen name="font_size_middle">16sp</dimen>
+    <dimen name="font_size_large">18sp</dimen>
+
+    <dimen name="fast_scroll_min_thumb_height">24dp</dimen>
+
+    <dimen name="line_height">0.8dp</dimen>
+    <dimen name="shadow_height">10dp</dimen>
+
+    <dimen name="desc_icon_size">18sp</dimen>
+
+    <dimen name="toolbar_elevation">4dp</dimen>
+
+    <!-- 状态栏高度 -->
+    <dimen name="status_bar_height">24dp</dimen>
+
+    <dimen name="fastscroll_bubble_radius">44dp</dimen>
+    <dimen name="fastscroll_bubble_size">88dp</dimen>
+    <dimen name="fastscroll_bubble_textsize">48sp</dimen>
+    <dimen name="fastscroll_bubble_padding">16dp</dimen>
+
+    <dimen name="fastscroll_handle_height">40dp</dimen>
+    <dimen name="fastscroll_handle_width">8dp</dimen>
+    <dimen name="fastscroll_handle_radius">0dp</dimen>
+
+    <dimen name="fastscroll_track_width">2dp</dimen>
+
+    <dimen name="fastscroll_scrollbar_margin_top">8dp</dimen>
+    <dimen name="fastscroll_scrollbar_margin_bottom">8dp</dimen>
+    <dimen name="fastscroll_scrollbar_padding_start">8dp</dimen>
+    <dimen name="fastscroll_scrollbar_padding_end">8dp</dimen>
+
+    <dimen name="fixed_height_bottom_padding">8dp</dimen>
+
+    <!-- 常用间距 -->
+    <dimen name="dp_4">4dp</dimen>
+    <dimen name="dp_8">8dp</dimen>
+    
+    <!-- 短剧集数项尺寸 -->
+    <dimen name="drama_episode_item_width">64dp</dimen>
+    <dimen name="drama_episode_item_height">48dp</dimen>
+    <dimen name="drama_episode_text_size">14sp</dimen>
+    <dimen name="drama_episode_margin">4dp</dimen>
+    <dimen name="drama_episode_corner_radius">8dp</dimen>
+    <dimen name="drama_episode_elevation">2dp</dimen>
+    <dimen name="drama_episode_stroke_width">1dp</dimen>
+    
+    <!-- 列表模式剧集项尺寸 -->
+    <dimen name="drama_episode_item_margin">8dp</dimen>
+    <dimen name="drama_episode_item_corner_radius">8dp</dimen>
+    <dimen name="drama_episode_item_elevation">2dp</dimen>
+    <dimen name="drama_episode_item_stroke_width">1dp</dimen>
+    <dimen name="drama_episode_item_text_size">14sp</dimen>
+    
+    <!-- 通用内边距 -->
+    <dimen name="common_padding">16dp</dimen>
+    
+    <!-- 响应式布局断点 -->
+    <dimen name="drama_grid_breakpoint_small">360dp</dimen>
+    <dimen name="drama_grid_breakpoint_medium">480dp</dimen>
+    <dimen name="drama_grid_breakpoint_large">600dp</dimen>
+    
+</resources>

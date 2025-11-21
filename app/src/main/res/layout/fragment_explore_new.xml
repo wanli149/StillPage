@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- 标题栏 -->
+    <io.stillpage.app.ui.widget.TitleBar
+        android:id="@+id/title_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:attachToActivity="false"
+        app:contentLayout="@layout/view_search"
+        app:layout_constraintTop_toTopOf="parent"
+        app:title="@string/discovery" />
+
+    <!-- 进度条（已移除，统一使用 SwipeRefreshLayout 与列表底部 LoadMoreView） -->
+
+    <!-- 内容类型标签栏 -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tab_layout_content_type"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:layout_constraintTop_toBottomOf="@id/title_bar"
+        app:tabBackground="@android:color/transparent"
+        app:tabMode="scrollable"
+        app:tabRippleColor="@android:color/transparent" />
+
+    <!-- 内容区域（简化容器层级为 FrameLayout，统一管理空态覆盖） -->
+    <FrameLayout
+        android:id="@+id/content_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tab_layout_content_type">
+
+        <!-- 下拉刷新 -->
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/refresh_layout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <!-- 内容列表 -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_content"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                tools:listitem="@layout/item_discovery_grid" />
+
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+        <!-- 空状态提示（覆盖在内容之上） -->
+        <TextView
+            android:id="@+id/tv_empty_msg"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="16dp"
+            android:gravity="center"
+            android:text="@string/explore_empty"
+            android:visibility="gone"
+            tools:text="暂无内容" />
+
+    </FrameLayout>
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

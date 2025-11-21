@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/drama_episode_item_margin"
+    android:layout_marginEnd="@dimen/drama_episode_item_margin"
+    android:layout_marginBottom="@dimen/drama_episode_item_margin"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground"
+    app:cardCornerRadius="@dimen/drama_episode_item_corner_radius"
+    app:cardElevation="@dimen/drama_episode_item_elevation"
+    app:strokeWidth="@dimen/drama_episode_item_stroke_width"
+    app:strokeColor="?attr/colorOutline">
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/common_padding">
+        
+        <TextView
+            android:id="@+id/tvEpisodeNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="第1集"
+            android:textSize="@dimen/drama_episode_item_text_size"
+            android:textColor="?attr/colorOnSurface"
+            android:fontFamily="sans-serif-medium"
+            tools:text="第1集" />
+            
+        <TextView
+            android:id="@+id/tvEpisodeTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="@dimen/common_padding"
+            android:text="剧集标题"
+            android:textSize="@dimen/drama_episode_item_text_size"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:maxLines="1"
+            android:ellipsize="end"
+            tools:text="剧集标题" />
+            
+        <ImageView
+            android:id="@+id/ivPlayStatus"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="@dimen/common_padding"
+            android:src="@drawable/ic_play_circle"
+            android:tint="?attr/colorPrimary"
+            android:contentDescription="播放状态" />
+            
+    </LinearLayout>
+    
+</com.google.android.material.card.MaterialCardView>

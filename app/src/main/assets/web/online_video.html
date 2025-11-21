@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线视频播放</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            padding: 20px;
+            background-color: #fdf2f2;
+            border: 1px solid #fecaca;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .info-message {
+            color: #3498db;
+            text-align: center;
+            padding: 20px;
+            background-color: #f0f9ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 10px;
+            border: none;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .video-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        video {
+            width: 100%;
+            height: auto;
+            background-color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>在线视频播放</h1>
+        
+        <div class="info-message">
+            <p>正在尝试获取视频地址...</p>
+            <p>如果长时间无法加载，请尝试以下操作：</p>
+            <ul style="text-align: left; display: inline-block;">
+                <li>检查网络连接</li>
+                <li>刷新页面重试</li>
+                <li>返回应用使用新的播放器</li>
+            </ul>
+        </div>
+
+        <div class="video-container" id="videoContainer" style="display: none;">
+            <video id="videoPlayer" controls>
+                <p>您的浏览器不支持视频播放。</p>
+            </video>
+        </div>
+
+        <div class="error-message" id="errorMessage" style="display: none;">
+            <p>获取视频地址失败</p>
+            <p>建议返回应用使用新的播放器获得更好的播放体验。</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="button" onclick="window.history.back()">返回</button>
+            <button class="button" onclick="location.reload()">刷新</button>
+        </div>
+    </div>
+
+    <script>
+        // 获取URL参数
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                book_id: params.get('book_id'),
+                source: params.get('source'),
+                tab: params.get('tab')
+            };
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            console.log('获取视频地址失败: Error: ' + message);
+            document.getElementById('errorMessage').style.display = 'block';
+            document.querySelector('.info-message').style.display = 'none';
+        }
+
+        // 尝试获取视频地址
+        async function getVideoUrl() {
+            const params = getUrlParams();
+            
+            if (!params.book_id) {
+                showError('缺少必要参数');
+                return;
+            }
+
+            try {
+                // 这里应该调用实际的API来获取视频地址
+                // 由于这是一个临时的解决方案，我们直接显示错误
+                setTimeout(() => {
+                    showError('获取视频地址失败');
+                }, 2000);
+                
+            } catch (error) {
+                showError('获取视频地址失败');
+            }
+        }
+
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            getVideoUrl();
+        });
+    </script>
+</body>
+</html>

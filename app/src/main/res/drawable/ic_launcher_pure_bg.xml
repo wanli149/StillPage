@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- 纯净的背景 - 完全按照HTML设计 (#FCFCFC) -->
+    <path
+        android:fillColor="#FCFCFC"
+        android:pathData="M0,0h200v200h-200z" />
+
+    <!-- 微妙的边框 - 按照HTML设计 (1px solid #F0F0F0) -->
+    <path
+        android:strokeColor="#F0F0F0"
+        android:strokeWidth="2"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M1,1h198v198h-198z" />
+</vector>

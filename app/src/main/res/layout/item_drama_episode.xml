@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/drama_episode_item_height"
+    android:layout_margin="@dimen/drama_episode_margin"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardCornerRadius="@dimen/drama_episode_corner_radius"
+    app:cardElevation="@dimen/drama_episode_elevation"
+    app:strokeWidth="@dimen/drama_episode_stroke_width"
+    app:strokeColor="?attr/colorOutline">
+
+    <TextView
+        android:id="@+id/tv_episode_number"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:textSize="@dimen/drama_episode_text_size"
+        android:textColor="?attr/colorOnSurface"
+        android:background="?attr/selectableItemBackground"
+        tools:text="1" />
+
+</com.google.android.material.card.MaterialCardView>
